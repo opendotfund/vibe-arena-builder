@@ -118,10 +118,10 @@ function VsPage() {
       </div>
 
       {/* Scoreboard */}
-      <div className="surface-card relative overflow-hidden rounded-2xl p-8">
-        <div className="absolute inset-0 grid-bg opacity-30" />
+      <div className="glass relative overflow-hidden rounded-2xl p-8">
+        <div className="absolute inset-0 opacity-30" />
         <div className="relative grid grid-cols-3 items-center gap-6">
-          <PlayerPanel side="cyan" name={agentA.name} bankroll={step?.a.bankroll ?? 1000} note={step?.a.note ?? "—"} highlight={winning === "a"} />
+          <PlayerPanel side="sky" name={agentA.name} bankroll={step?.a.bankroll ?? 1000} note={step?.a.note ?? "—"} highlight={winning === "a"} />
 
           <div className="flex flex-col items-center">
             <div className="mono text-xs tracking-widest text-muted-foreground">TICK {idx + 1} / {steps.length}</div>
@@ -139,7 +139,7 @@ function VsPage() {
             </div>
 
             <div className="mt-4 flex items-center gap-2">
-              <button onClick={() => setPlaying((p) => !p)} className="inline-flex items-center gap-1 rounded-md bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground glow-cyan">
+              <button onClick={() => setPlaying((p) => !p)} className="inline-flex items-center gap-1 rounded-md bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground glow-sky">
                 {playing ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
                 {playing ? "Pause" : "Play"}
               </button>
@@ -149,14 +149,14 @@ function VsPage() {
             </div>
           </div>
 
-          <PlayerPanel side="magenta" name={agentB.name} bankroll={step?.b.bankroll ?? 1000} note={step?.b.note ?? "—"} highlight={winning === "b"} />
+          <PlayerPanel side="rose" name={agentB.name} bankroll={step?.b.bankroll ?? 1000} note={step?.b.note ?? "—"} highlight={winning === "b"} />
         </div>
       </div>
 
       {/* Timeline */}
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
-        <TimelineCard side="cyan" title={agentA.name} steps={steps} pick={(s) => s.a} idx={idx} onSelect={setIdx} />
-        <TimelineCard side="magenta" title={agentB.name} steps={steps} pick={(s) => s.b} idx={idx} onSelect={setIdx} />
+        <TimelineCard side="sky" title={agentA.name} steps={steps} pick={(s) => s.a} idx={idx} onSelect={setIdx} />
+        <TimelineCard side="rose" title={agentB.name} steps={steps} pick={(s) => s.b} idx={idx} onSelect={setIdx} />
       </div>
 
       <div className="mt-8 text-center">
@@ -170,10 +170,10 @@ function Row({ label, value }: { label: string; value: number | string }) {
   return <div className="flex justify-between"><span className="text-muted-foreground">{label}</span><span>{value}</span></div>;
 }
 
-function PlayerPanel({ side, name, bankroll, note, highlight }: { side: "cyan" | "magenta"; name: string; bankroll: number; note: string; highlight: boolean }) {
-  const color = side === "cyan" ? "var(--cyan)" : "var(--magenta)";
+function PlayerPanel({ side, name, bankroll, note, highlight }: { side: "sky" | "rose"; name: string; bankroll: number; note: string; highlight: boolean }) {
+  const color = side === "sky" ? "var(--sky)" : "var(--rose)";
   return (
-    <div className={`flex flex-col items-center gap-3 rounded-xl p-4 transition ${highlight ? (side === "cyan" ? "glow-cyan" : "glow-magenta") : ""}`}>
+    <div className={`flex flex-col items-center gap-3 rounded-xl p-4 transition ${highlight ? (side === "sky" ? "glow-sky" : "glow-rose") : ""}`}>
       <AgentAvatar side={side} name={name} animated={highlight} />
       <div className="w-full rounded-lg border border-border/70 bg-background/60 p-3">
         <div className="mono text-[10px] text-muted-foreground">BANKROLL</div>
@@ -186,10 +186,10 @@ function PlayerPanel({ side, name, bankroll, note, highlight }: { side: "cyan" |
 
 function TimelineCard({
   side, title, steps, pick, idx, onSelect,
-}: { side: "cyan" | "magenta"; title: string; steps: BattleStep[]; pick: (s: BattleStep) => { bankroll: number; note: string }; idx: number; onSelect: (i: number) => void }) {
-  const color = side === "cyan" ? "var(--cyan)" : "var(--magenta)";
+}: { side: "sky" | "rose"; title: string; steps: BattleStep[]; pick: (s: BattleStep) => { bankroll: number; note: string }; idx: number; onSelect: (i: number) => void }) {
+  const color = side === "sky" ? "var(--sky)" : "var(--rose)";
   return (
-    <div className="surface-card rounded-xl p-4">
+    <div className="glass rounded-xl p-4">
       <div className="flex items-center justify-between">
         <div className="mono text-[10px] tracking-widest" style={{ color }}>{title}</div>
         <div className="mono text-[10px] text-muted-foreground">bankroll over time</div>

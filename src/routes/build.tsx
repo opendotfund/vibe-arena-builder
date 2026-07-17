@@ -95,10 +95,10 @@ function Build() {
           <button onClick={newStrat} className="inline-flex items-center gap-2 rounded-md border border-border px-3 py-2 text-sm hover:bg-secondary">
             <Plus className="h-4 w-4" /> New
           </button>
-          <button onClick={save} className="inline-flex items-center gap-2 rounded-md bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground glow-cyan">
+          <button onClick={save} className="inline-flex items-center gap-2 rounded-md bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground glow-sky">
             <Save className="h-4 w-4" /> Save
           </button>
-          <button onClick={sendToBattle} className="inline-flex items-center gap-2 rounded-md bg-accent px-3 py-2 text-sm font-semibold text-accent-foreground glow-magenta">
+          <button onClick={sendToBattle} className="inline-flex items-center gap-2 rounded-md bg-accent px-3 py-2 text-sm font-semibold text-accent-foreground glow-rose">
             <Play className="h-4 w-4" /> Battle
           </button>
         </div>
@@ -106,7 +106,7 @@ function Build() {
 
       <div className="grid gap-6 lg:grid-cols-[220px_1fr_320px]">
         {/* Saved strategies */}
-        <aside className="surface-card rounded-xl p-3 h-fit">
+        <aside className="glass rounded-xl p-3 h-fit">
           <div className="mono text-[10px] text-muted-foreground px-2 py-1 tracking-widest">MY AGENTS</div>
           {list.length === 0 && <div className="px-2 py-6 text-xs text-muted-foreground">No agents yet. Save one to see it here.</div>}
           <ul className="space-y-1">
@@ -126,7 +126,7 @@ function Build() {
         </aside>
 
         {/* Rule editor */}
-        <section className="surface-card rounded-xl p-6">
+        <section className="glass rounded-xl p-6">
           <input
             value={current.name}
             onChange={(e) => update({ name: e.target.value })}
@@ -159,7 +159,7 @@ function Build() {
         </section>
 
         {/* Pseudocode preview */}
-        <aside className="surface-card rounded-xl p-4 h-fit sticky top-24">
+        <aside className="glass rounded-xl p-4 h-fit sticky top-24">
           <div className="mb-2 flex items-center gap-2 mono text-[10px] text-muted-foreground tracking-widest">
             <FileCode2 className="h-3.5 w-3.5" /> AGENT PROGRAM
           </div>
@@ -169,7 +169,7 @@ function Build() {
           <div className="mt-4 text-[11px] text-muted-foreground">
             This is the program your agent runs each market tick. Rules are evaluated top-to-bottom; the first matching rule fires.
           </div>
-          <Link to="/vs" search={{ a: current.id }} className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-md bg-accent px-3 py-2 text-sm font-semibold text-accent-foreground glow-magenta">
+          <Link to="/vs" search={{ a: current.id }} className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-md bg-accent px-3 py-2 text-sm font-semibold text-accent-foreground glow-rose">
             <Play className="h-4 w-4" /> Send to arena
           </Link>
         </aside>
@@ -292,7 +292,7 @@ function ImportDialog({ onClose, onImport }: { onClose: () => void; onImport: (s
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/70 p-4 backdrop-blur">
-      <div className="surface-card w-full max-w-2xl rounded-xl p-6">
+      <div className="glass w-full max-w-2xl rounded-xl p-6">
         <div className="flex items-center gap-2">
           <Sparkles className="h-5 w-5 text-primary" />
           <h2 className="text-xl font-bold">Import strategy in plain English</h2>
@@ -311,7 +311,7 @@ function ImportDialog({ onClose, onImport }: { onClose: () => void; onImport: (s
           <button
             onClick={submit}
             disabled={busy}
-            className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground glow-cyan disabled:opacity-50"
+            className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground glow-sky disabled:opacity-50"
           >
             {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
             {busy ? "Converting…" : "Convert with Gemini"}
