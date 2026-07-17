@@ -1,10 +1,11 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import duckdb from "duckdb";
 
-const getDb = () => {
+const getDb = async () => {
   const token = process.env.MOTHERDUCK_TOKEN;
   if (!token) throw new Error("MOTHERDUCK_TOKEN is missing");
+  // @ts-ignore
+  const duckdb = (await import("duckdb")).default;
   // md: prefix connects to MotherDuck cloud
   return new duckdb.Database(`md:?motherduck_token=${token}`);
 };
@@ -29,9 +30,9 @@ export const streamToMotherDuck = createServerFn({ method: "POST" })
       .parse(data)
   )
   .handler(async ({ data }) => {
+    const db = await getDb();
     return new Promise((resolve, reject) => {
       try {
-        const db = getDb();
         const con = db.connect();
 
         // Create a unique table name for this backtest run

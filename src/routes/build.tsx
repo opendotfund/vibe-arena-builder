@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { Plus, Trash2, Sparkles, Save, Play, FileCode2, Loader2 } from "lucide-react";
+import { Plus, Trash2, Sparkles, Save, Play, FileCode2, Loader2, Bot } from "lucide-react";
 
 import {
   type ConditionField,
@@ -11,8 +11,8 @@ import {
   type Rule,
   FIELD_LABELS,
   emptyStrategy,
-  loadStrategies,
-  upsertStrategy,
+  loadStrategiesAsync,
+  upsertStrategyAsync,
   deleteStrategy,
   newId,
   strategyToPseudocode,
@@ -44,14 +44,15 @@ function Build() {
   const navigate = useNavigate();
   const [list, setList] = useState<Strategy[]>([]);
   const [current, setCurrent] = useState<Strategy>(() => emptyStrategy());
-  const [importOpen, setImportOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<"ai" | "visual">("ai");
 
   const search = Route.useSearch();
 
   useEffect(() => {
-    const l = loadStrategies();
-    setList(l);
-    if (l[0]) setCurrent(l[0]);
+    loadStrategiesAsync().then(l => {
+      setList(l);
+      if (l[0]) setCurrent(l[0]);
+    });
   }, []);
 
   useEffect(() => {
@@ -74,23 +75,24 @@ function Build() {
       ],
     });
 
-  const save = () => {
-    upsertStrategy(current);
-    setList(loadStrategies());
+  const save = async () => {
+    await upsertStrategyAsync(current);
+    const l = await loadStrategiesAsync();
+    setList(l);
     toast.success("Strategy saved");
   };
 
-  const remove = (id: string) => {
+  const remove = async (id: string) => {
     deleteStrategy(id);
-    const l = loadStrategies();
+    const l = await loadStrategiesAsync();
     setList(l);
     if (current.id === id) setCurrent(l[0] ?? emptyStrategy());
   };
 
   const newStrat = () => setCurrent(emptyStrategy());
 
-  const sendToBattle = () => {
-    upsertStrategy(current);
+  const sendToBattle = async () => {
+    await upsertStrategyAsync(current);
     navigate({ to: "/vs", search: { a: current.id } });
   };
 
@@ -102,9 +104,6 @@ function Build() {
           <h1 className="mt-1 text-3xl font-bold">Build your agent</h1>
         </div>
         <div className="flex gap-2">
-          <button onClick={() => setImportOpen(true)} className="inline-flex items-center gap-2 rounded-md border border-border px-3 py-2 text-sm hover:bg-secondary">
-            <Sparkles className="h-4 w-4 text-primary" /> Import with AI
-          </button>
           <button onClick={newStrat} className="inline-flex items-center gap-2 rounded-md border border-border px-3 py-2 text-sm hover:bg-secondary">
             <Plus className="h-4 w-4" /> New
           </button>
@@ -138,12 +137,28 @@ function Build() {
           </ul>
         </aside>
 
-        {/* Rule editor */}
+        {/* Main Editor */}
         <section className="glass rounded-xl p-6">
+          <div className="flex items-center gap-6 border-b border-border/50 pb-4 mb-6">
+            <button 
+              onClick={() => setActiveTab("ai")}
+              className={`pb-2 text-sm font-semibold border-b-2 transition-colors flex items-center gap-2 ${activeTab === "ai" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+            >
+              <Bot className="h-4 w-4" /> AI & Backtest
+            </button>
+            <button 
+              onClick={() => setActiveTab("visual")}
+              className={`pb-2 text-sm font-semibold border-b-2 transition-colors flex items-center gap-2 ${activeTab === "visual" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+            >
+              <FileCode2 className="h-4 w-4" /> Advanced Visual Builder
+            </button>
+          </div>
+
           <input
             value={current.name}
             onChange={(e) => update({ name: e.target.value })}
             className="w-full bg-transparent text-2xl font-bold outline-none"
+            placeholder="Agent Name..."
           />
           <input
             value={current.description}
@@ -152,26 +167,39 @@ function Build() {
             className="mt-1 w-full bg-transparent text-sm text-muted-foreground outline-none"
           />
 
-          <div className="mt-6 space-y-4">
-            {current.rules.map((rule, idx) => (
-              <RuleCard
-                key={rule.id}
-                rule={rule}
-                index={idx}
-                onChange={(p) => updateRule(rule.id, p)}
-                onDelete={() => update({ rules: current.rules.filter((r) => r.id !== rule.id) })}
-              />
-            ))}
-            <button
-              onClick={addRule}
-              className="w-full rounded-lg border border-dashed border-border/70 py-4 text-sm text-muted-foreground hover:bg-secondary"
-            >
-              <Plus className="mr-1 inline h-4 w-4" /> Add rule
-            </button>
+          <div className="mt-8">
+            {activeTab === "ai" && (
+              <div className="space-y-8">
+                <AiBuilderPanel onImport={(s) => setCurrent({ ...s, id: current.id, name: current.name, description: current.description || s.description, createdAt: current.createdAt, updatedAt: Date.now() })} />
+                <div className="border-t border-border/50 pt-8">
+                  <BacktestPanel strategy={current} />
+                </div>
+              </div>
+            )}
+
+            {activeTab === "visual" && (
+              <div className="space-y-4">
+                {current.rules.map((rule, idx) => (
+                  <RuleCard
+                    key={rule.id}
+                    rule={rule}
+                    index={idx}
+                    onChange={(p) => updateRule(rule.id, p)}
+                    onDelete={() => update({ rules: current.rules.filter((r) => r.id !== rule.id) })}
+                  />
+                ))}
+                <button
+                  onClick={addRule}
+                  className="w-full rounded-lg border border-dashed border-border/70 py-4 text-sm text-muted-foreground hover:bg-secondary"
+                >
+                  <Plus className="mr-1 inline h-4 w-4" /> Add rule
+                </button>
+              </div>
+            )}
           </div>
         </section>
 
-        {/* Pseudocode preview & Backtest */}
+        {/* Pseudocode preview */}
         <div className="flex flex-col gap-6 h-fit sticky top-24">
           <aside className="glass rounded-xl p-4">
             <div className="mb-2 flex items-center gap-2 mono text-[10px] text-muted-foreground tracking-widest">
@@ -183,16 +211,12 @@ function Build() {
             <div className="mt-4 text-[11px] text-muted-foreground">
               This is the program your agent runs each market tick. Rules are evaluated top-to-bottom; the first matching rule fires.
             </div>
-            <Link to="/vs" search={{ a: current.id }} className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-md bg-accent px-3 py-2 text-sm font-semibold text-accent-foreground glow-rose">
+            <button onClick={sendToBattle} className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-md bg-accent px-3 py-2 text-sm font-semibold text-accent-foreground glow-rose">
               <Play className="h-4 w-4" /> Send to arena
-            </Link>
+            </button>
           </aside>
-
-          <BacktestPanel strategy={current} />
         </div>
       </div>
-
-      {importOpen && <ImportDialog onClose={() => setImportOpen(false)} onImport={(s) => { setCurrent({ ...s, id: newId(), createdAt: Date.now(), updatedAt: Date.now() }); setImportOpen(false); toast.success("Strategy imported"); }} />}
     </main>
   );
 }
@@ -284,7 +308,7 @@ function RuleCard({
   );
 }
 
-function ImportDialog({ onClose, onImport }: { onClose: () => void; onImport: (s: Strategy) => void }) {
+function AiBuilderPanel({ onImport }: { onImport: (s: Strategy) => void }) {
   const [text, setText] = useState("Bet 3% on the home team whenever their odds are 2.5 or higher and the implied probability is below 45%. If we've already used more than 30% of bankroll, skip.");
   const [busy, setBusy] = useState(false);
   const run = useServerFn(importStrategy);
@@ -303,13 +327,8 @@ function ImportDialog({ onClose, onImport }: { onClose: () => void; onImport: (s
     setBusy(true);
     try {
       const parsed = await run({ data: { text } });
-      const strat: Strategy = {
-        ...parsed,
-        id: newId(),
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
-      };
-      onImport(strat);
+      onImport(parsed as Strategy);
+      toast.success("Strategy generated from AI successfully!");
     } catch (e: any) {
       toast.error(e?.message ?? "Import failed");
     } finally {
@@ -318,38 +337,35 @@ function ImportDialog({ onClose, onImport }: { onClose: () => void; onImport: (s
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/70 p-4 backdrop-blur">
-      <div className="glass w-full max-w-2xl rounded-xl p-6">
-        <div className="flex items-center gap-2">
-          <Sparkles className="h-5 w-5 text-primary" />
-          <h2 className="text-xl font-bold">Import strategy in plain English</h2>
-        </div>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Describe your betting logic or upload an algorithmic trading script (MQL4/MQL5). Gemini converts it into structured rules your agent can run.
-        </p>
-        <div className="mt-4 flex items-center">
-           <label className="cursor-pointer inline-flex items-center gap-1.5 text-xs text-primary hover:underline font-medium">
-             <FileCode2 className="h-4 w-4" /> Upload .mq4 / .mq5 file
-             <input type="file" accept=".mq4,.mq5,.txt" className="hidden" onChange={handleFileUpload} />
-           </label>
-        </div>
-        <textarea
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          rows={8}
-          className="mt-4 w-full rounded-md border border-border bg-background/60 p-3 text-sm mono outline-none focus:ring-1 focus:ring-primary"
-        />
-        <div className="mt-4 flex justify-end gap-2">
-          <button onClick={onClose} className="rounded-md border border-border px-3 py-2 text-sm hover:bg-secondary">Cancel</button>
-          <button
-            onClick={submit}
-            disabled={busy}
-            className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground glow-sky disabled:opacity-50"
-          >
-            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-            {busy ? "Converting…" : "Convert with Gemini"}
-          </button>
-        </div>
+    <div className="bg-background/40 rounded-lg p-5 border border-border/50">
+      <div className="flex items-center gap-2 mb-2">
+        <Sparkles className="h-5 w-5 text-primary" />
+        <h2 className="text-lg font-bold">Generate with AI</h2>
+      </div>
+      <p className="text-sm text-muted-foreground">
+        Describe your betting logic or upload an algorithmic trading script (MQL4/MQL5). Gemini will convert it into structured rules.
+      </p>
+      
+      <textarea
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        rows={4}
+        className="mt-4 w-full rounded-md border border-border bg-background/60 p-3 text-sm mono outline-none focus:ring-1 focus:ring-primary"
+      />
+      
+      <div className="mt-4 flex items-center justify-between">
+        <label className="cursor-pointer inline-flex items-center gap-1.5 text-xs text-primary hover:underline font-medium">
+          <FileCode2 className="h-4 w-4" /> Upload .mq4 / .mq5 file
+          <input type="file" accept=".mq4,.mq5,.txt" className="hidden" onChange={handleFileUpload} />
+        </label>
+        <button
+          onClick={submit}
+          disabled={busy}
+          className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground glow-sky disabled:opacity-50"
+        >
+          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+          {busy ? "Generating…" : "Generate Rules"}
+        </button>
       </div>
     </div>
   );
