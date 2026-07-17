@@ -13,8 +13,7 @@ import { Toaster } from "sonner";
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { BuyCoffeeButton } from "../components/BuyCoffeeButton";
-import { supabase } from "../lib/supabase";
-import type { User } from "@supabase/supabase-js";
+import { ClerkProvider, SignInButton, SignedIn, SignedOut, UserButton } from "@clerk/clerk-react";
 
 function NotFoundComponent() {
   return (
@@ -104,34 +103,6 @@ function RootShell({ children }: { children: ReactNode }) {
 }
 
 function Nav() {
-  const [user, setUser] = useState<User | null>(null);
-  const [email, setEmail] = useState("");
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-    });
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-    });
-    return () => subscription.unsubscribe();
-  }, []);
-
-  const login = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email) return;
-    setLoading(true);
-    const { error } = await supabase.auth.signInWithOtp({ 
-      email, 
-      options: { emailRedirectTo: window.location.origin } 
-    });
-    if (error) toast.error(error.message);
-    else toast.success("Magic link sent! Check your email.");
-    setLoading(false);
-  };
-  const logout = () => supabase.auth.signOut();
-
   return (
     <header className="sticky top-0 z-40">
       <div className="mx-auto mt-3 flex max-w-6xl items-center justify-between rounded-full glass px-5 py-2.5">
@@ -148,28 +119,14 @@ function Nav() {
           <Link to="/build" search={{ new: 1 }} className="ml-2 rounded-full bg-primary px-3.5 py-1.5 text-primary-foreground shadow-sm hover:opacity-90">New agent</Link>
           
           <div className="ml-4 pl-4 border-l border-border/50 flex items-center gap-2">
-            {user ? (
-              <>
-                <div className="h-6 w-6 rounded-full bg-primary/20 flex items-center justify-center text-xs font-bold text-primary uppercase">
-                  {user.email?.[0] ?? "U"}
-                </div>
-                <button onClick={logout} className="text-xs font-medium text-muted-foreground hover:text-foreground">Log out</button>
-              </>
-            ) : (
-              <form onSubmit={login} className="flex items-center gap-2">
-                <input 
-                  type="email" 
-                  placeholder="Enter email..." 
-                  value={email} 
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="h-7 w-40 rounded-md border border-border/50 bg-background/50 px-2 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-                  required
-                />
-                <button type="submit" disabled={loading} className="text-xs font-medium text-primary hover:text-primary/80 disabled:opacity-50 whitespace-nowrap">
-                  {loading ? "Sending..." : "Send link"}
-                </button>
-              </form>
-            )}
+            <SignedOut>
+              <SignInButton mode="modal">
+                <button className="text-xs font-medium text-primary hover:text-primary/80 whitespace-nowrap">Sign In</button>
+              </SignInButton>
+            </SignedOut>
+            <SignedIn>
+              <UserButton />
+            </SignedIn>
           </div>
         </nav>
       </div>
@@ -199,14 +156,20 @@ function Footer() {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  
+  // Get clerk key from env - standard Vite way
+  const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY || "";
+  
   return (
-    <QueryClientProvider client={queryClient}>
-      <Nav />
-      <div className="min-h-[calc(100vh-140px)]">
-        <Outlet />
-      </div>
-      <Footer />
-      <Toaster theme="light" position="top-center" />
-    </QueryClientProvider>
+    <ClerkProvider publishableKey={clerkPubKey}>
+      <QueryClientProvider client={queryClient}>
+        <Nav />
+        <div className="min-h-[calc(100vh-140px)]">
+          <Outlet />
+        </div>
+        <Footer />
+        <Toaster theme="light" position="top-center" />
+      </QueryClientProvider>
+    </ClerkProvider>
   );
 }

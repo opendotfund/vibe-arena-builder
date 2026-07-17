@@ -1,5 +1,5 @@
 // Shared strategy types and localStorage helpers. Client-safe.
-import { supabase } from "./supabase";
+import { getStrategiesDb, upsertStrategyDb, deleteStrategyDb } from "./db-functions";
 
 export type ConditionField =
   | "home_odds"
@@ -83,28 +83,38 @@ export function deleteStrategy(id: string) {
 }
 
 // Supabase Async wrappers
-export async function loadStrategiesAsync(): Promise<Strategy[]> {
+export async function loadStrategiesAsync(userId?: string): Promise<Strategy[]> {
   if (typeof window === "undefined") return [];
-  const { data: { session } } = await supabase.auth.getSession();
-  if (session?.user) {
-    const { data, error } = await supabase.from('strategies').select('*').eq('user_id', session.user.id);
-    if (!error && data && data.length > 0) {
-       return data.map(d => JSON.parse(d.strategy_json));
+  if (userId) {
+    try {
+      const dbStrats = await getStrategiesDb({ data: { userId } });
+      if (dbStrats && dbStrats.length > 0) return dbStrats;
+    } catch (e) {
+      console.error(e);
     }
   }
   return loadStrategies(); // Fallback
 }
 
-export async function upsertStrategyAsync(s: Strategy) {
+export async function upsertStrategyAsync(s: Strategy, userId?: string) {
   upsertStrategy(s); // Local optimistic save
-  const { data: { session } } = await supabase.auth.getSession();
-  if (session?.user) {
-    await supabase.from('strategies').upsert({
-      id: s.id,
-      user_id: session.user.id,
-      strategy_json: JSON.stringify(s),
-      updated_at: new Date().toISOString()
-    });
+  if (userId) {
+    try {
+      await upsertStrategyDb({ data: { userId, strategyId: s.id, strategyJson: JSON.stringify(s) } });
+    } catch (e) {
+      console.error(e);
+    }
+  }
+}
+
+export async function deleteStrategyAsync(id: string, userId?: string) {
+  deleteStrategy(id);
+  if (userId) {
+    try {
+      await deleteStrategyDb({ data: { userId, strategyId: id } });
+    } catch (e) {
+      console.error(e);
+    }
   }
 }
 

@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { Plus, Trash2, Sparkles, Save, Play, FileCode2, Loader2, Bot } from "lucide-react";
+import { useUser } from "@clerk/clerk-react";
 
 import {
   type ConditionField,
@@ -13,7 +14,7 @@ import {
   emptyStrategy,
   loadStrategiesAsync,
   upsertStrategyAsync,
-  deleteStrategy,
+  deleteStrategyAsync,
   newId,
   strategyToPseudocode,
 } from "@/lib/strategies";
@@ -45,15 +46,18 @@ function Build() {
   const [list, setList] = useState<Strategy[]>([]);
   const [current, setCurrent] = useState<Strategy>(() => emptyStrategy());
   const [activeTab, setActiveTab] = useState<"ai" | "visual">("ai");
+  
+  const { user } = useUser();
+  const userId = user?.id;
 
   const search = Route.useSearch();
 
   useEffect(() => {
-    loadStrategiesAsync().then(l => {
+    loadStrategiesAsync(userId).then(l => {
       setList(l);
       if (l[0]) setCurrent(l[0]);
     });
-  }, []);
+  }, [userId]);
 
   useEffect(() => {
     if (search.new) {
@@ -76,15 +80,15 @@ function Build() {
     });
 
   const save = async () => {
-    await upsertStrategyAsync(current);
-    const l = await loadStrategiesAsync();
+    await upsertStrategyAsync(current, userId);
+    const l = await loadStrategiesAsync(userId);
     setList(l);
     toast.success("Strategy saved");
   };
 
   const remove = async (id: string) => {
-    deleteStrategy(id);
-    const l = await loadStrategiesAsync();
+    await deleteStrategyAsync(id, userId);
+    const l = await loadStrategiesAsync(userId);
     setList(l);
     if (current.id === id) setCurrent(l[0] ?? emptyStrategy());
   };
@@ -92,7 +96,7 @@ function Build() {
   const newStrat = () => setCurrent(emptyStrategy());
 
   const sendToBattle = async () => {
-    await upsertStrategyAsync(current);
+    await upsertStrategyAsync(current, userId);
     navigate({ to: "/vs", search: { a: current.id } });
   };
 
