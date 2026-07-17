@@ -68,7 +68,8 @@ Return ONLY JSON matching this TypeScript type:
 Use short lowercase IDs like "r1", "c1". Prefer 1-4 rules and 1-3 conditions per rule. Stake percentages should be modest (0.5–10). Do not invent fields or operators outside the enums.`;
 
 export const importStrategy = createServerFn({ method: "POST" })
-  .inputValidator((data: unknown) => z.object({ text: z.string().min(3) }).parse(data))
+  .validator((data: unknown) =>
+    z.object({ text: z.string().min(3) }).parse(data))
   .handler(async ({ data }) => {
     const key = process.env.GEMINI_API_KEY;
     if (!key) throw new Error("Missing GEMINI_API_KEY");

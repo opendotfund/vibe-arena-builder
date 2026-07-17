@@ -4,7 +4,7 @@ import { Play, Database, Loader2, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 import { Backtester, type TradeResult } from "../lib/backtester";
 import type { Strategy } from "../lib/strategies";
-import { streamToMotherDuck } from "../server/parquet-stream";
+import { streamToMotherDuck } from "../lib/parquet-stream";
 
 export function BacktestPanel({ strategy }: { strategy: Strategy }) {
   const [slug, setSlug] = useState("super-bowl-champion-2026-731");

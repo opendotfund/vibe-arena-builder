@@ -10,7 +10,7 @@ const getDb = () => {
 };
 
 export const streamToMotherDuck = createServerFn({ method: "POST" })
-  .inputValidator((data: unknown) =>
+  .validator((data: unknown) =>
     z
       .object({
         strategyId: z.string(),
