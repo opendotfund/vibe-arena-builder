@@ -47,13 +47,13 @@ function Landing() {
         <div className="flex animate-marquee whitespace-nowrap mono text-xs tracking-widest text-muted-foreground gap-10">
           {Array.from({ length: 2 }).map((_, k) => (
             <div key={k} className="flex gap-10">
-              <span>▲ CYAN.AGENT bet HOME @ 2.35 → +48u</span>
+              <span>▲ AGENT ONE bet HOME @ 2.35 → +48u</span>
               <span>● MARKET move −4.2% (5m)</span>
-              <span>▼ MAGENTA.AGENT bet AWAY @ 3.10 → −20u</span>
+              <span>▼ AGENT TWO bet AWAY @ 3.10 → −20u</span>
               <span>◆ ROUND 7 · 30m to KO</span>
-              <span>▲ CYAN.AGENT bet DRAW @ 3.25 → +65u</span>
+              <span>▲ AGENT ONE bet DRAW @ 3.25 → +65u</span>
               <span>● IMPLIED_HOME_PROB 41.3%</span>
-              <span>▼ MAGENTA.AGENT skip · bankroll 78%</span>
+              <span>▼ AGENT TWO skip · bankroll 78%</span>
               <span>◆ TX ODDS · WORLDCUP FEED · LIVE</span>
             </div>
           ))}
@@ -104,7 +104,7 @@ function ArenaPreview() {
       <div className="absolute inset-0 opacity-30" />
       <div className="relative grid grid-cols-3 items-center gap-6">
         <div className="flex flex-col items-center gap-4">
-          <AgentAvatar side="sky" name="CYAN.AGENT" />
+          <AgentAvatar side="sky" name="AGENT ONE" />
           <div className="w-full rounded-lg border border-border/70 bg-background/50 p-3 text-left">
             <div className="mono text-[10px] text-muted-foreground">BANKROLL</div>
             <div className="text-2xl font-bold text-primary">$1,240</div>
@@ -124,7 +124,7 @@ function ArenaPreview() {
         </div>
 
         <div className="flex flex-col items-center gap-4">
-          <AgentAvatar side="rose" name="MAGENTA.AGENT" />
+          <AgentAvatar side="rose" name="AGENT TWO" />
           <div className="w-full rounded-lg border border-border/70 bg-background/50 p-3 text-left">
             <div className="mono text-[10px] text-muted-foreground">BANKROLL</div>
             <div className="text-2xl font-bold" style={{ color: "var(--rose)" }}>$860</div>
