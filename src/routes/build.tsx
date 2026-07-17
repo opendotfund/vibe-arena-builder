@@ -18,6 +18,7 @@ import {
   strategyToPseudocode,
 } from "@/lib/strategies";
 import { importStrategy } from "@/lib/import-strategy.functions";
+import { BacktestPanel } from "@/components/BacktestPanel";
 
 export const Route = createFileRoute("/build")({
   head: () => ({
@@ -25,6 +26,9 @@ export const Route = createFileRoute("/build")({
       { title: "Build your agent — AgentVS" },
       { name: "description", content: "Drag-and-drop rules or import your strategy in plain English." },
     ],
+  }),
+  validateSearch: (search: Record<string, unknown>) => ({
+    new: search.new ? 1 : undefined,
   }),
   component: Build,
 });
@@ -42,11 +46,20 @@ function Build() {
   const [current, setCurrent] = useState<Strategy>(() => emptyStrategy());
   const [importOpen, setImportOpen] = useState(false);
 
+  const search = Route.useSearch();
+
   useEffect(() => {
     const l = loadStrategies();
     setList(l);
     if (l[0]) setCurrent(l[0]);
   }, []);
+
+  useEffect(() => {
+    if (search.new) {
+      setCurrent(emptyStrategy());
+      navigate({ to: "/build", search: {}, replace: true });
+    }
+  }, [search.new, navigate]);
 
   const update = (patch: Partial<Strategy>) => setCurrent((s) => ({ ...s, ...patch, updatedAt: Date.now() }));
 
@@ -158,21 +171,25 @@ function Build() {
           </div>
         </section>
 
-        {/* Pseudocode preview */}
-        <aside className="glass rounded-xl p-4 h-fit sticky top-24">
-          <div className="mb-2 flex items-center gap-2 mono text-[10px] text-muted-foreground tracking-widest">
-            <FileCode2 className="h-3.5 w-3.5" /> AGENT PROGRAM
-          </div>
-          <pre className="mono text-[11px] leading-relaxed whitespace-pre-wrap text-foreground/90">
-{strategyToPseudocode(current)}
-          </pre>
-          <div className="mt-4 text-[11px] text-muted-foreground">
-            This is the program your agent runs each market tick. Rules are evaluated top-to-bottom; the first matching rule fires.
-          </div>
-          <Link to="/vs" search={{ a: current.id }} className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-md bg-accent px-3 py-2 text-sm font-semibold text-accent-foreground glow-rose">
-            <Play className="h-4 w-4" /> Send to arena
-          </Link>
-        </aside>
+        {/* Pseudocode preview & Backtest */}
+        <div className="flex flex-col gap-6 h-fit sticky top-24">
+          <aside className="glass rounded-xl p-4">
+            <div className="mb-2 flex items-center gap-2 mono text-[10px] text-muted-foreground tracking-widest">
+              <FileCode2 className="h-3.5 w-3.5" /> AGENT PROGRAM
+            </div>
+            <pre className="mono text-[11px] leading-relaxed whitespace-pre-wrap text-foreground/90">
+  {strategyToPseudocode(current)}
+            </pre>
+            <div className="mt-4 text-[11px] text-muted-foreground">
+              This is the program your agent runs each market tick. Rules are evaluated top-to-bottom; the first matching rule fires.
+            </div>
+            <Link to="/vs" search={{ a: current.id }} className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-md bg-accent px-3 py-2 text-sm font-semibold text-accent-foreground glow-rose">
+              <Play className="h-4 w-4" /> Send to arena
+            </Link>
+          </aside>
+
+          <BacktestPanel strategy={current} />
+        </div>
       </div>
 
       {importOpen && <ImportDialog onClose={() => setImportOpen(false)} onImport={(s) => { setCurrent({ ...s, id: newId(), createdAt: Date.now(), updatedAt: Date.now() }); setImportOpen(false); toast.success("Strategy imported"); }} />}
@@ -272,6 +289,16 @@ function ImportDialog({ onClose, onImport }: { onClose: () => void; onImport: (s
   const [busy, setBusy] = useState(false);
   const run = useServerFn(importStrategy);
 
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      if (ev.target?.result) setText(ev.target.result as string);
+    };
+    reader.readAsText(file);
+  };
+
   const submit = async () => {
     setBusy(true);
     try {
@@ -298,8 +325,14 @@ function ImportDialog({ onClose, onImport }: { onClose: () => void; onImport: (s
           <h2 className="text-xl font-bold">Import strategy in plain English</h2>
         </div>
         <p className="mt-1 text-sm text-muted-foreground">
-          Describe your betting logic. Gemini converts it into structured rules your agent can run.
+          Describe your betting logic or upload an algorithmic trading script (MQL4/MQL5). Gemini converts it into structured rules your agent can run.
         </p>
+        <div className="mt-4 flex items-center">
+           <label className="cursor-pointer inline-flex items-center gap-1.5 text-xs text-primary hover:underline font-medium">
+             <FileCode2 className="h-4 w-4" /> Upload .mq4 / .mq5 file
+             <input type="file" accept=".mq4,.mq5,.txt" className="hidden" onChange={handleFileUpload} />
+           </label>
+        </div>
         <textarea
           value={text}
           onChange={(e) => setText(e.target.value)}

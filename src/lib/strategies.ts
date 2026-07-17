@@ -1,4 +1,5 @@
 // Shared strategy types and localStorage helpers. Client-safe.
+import { supabase } from "./supabase";
 
 export type ConditionField =
   | "home_odds"
@@ -79,6 +80,32 @@ export function upsertStrategy(s: Strategy) {
 
 export function deleteStrategy(id: string) {
   saveStrategies(loadStrategies().filter((s) => s.id !== id));
+}
+
+// Supabase Async wrappers
+export async function loadStrategiesAsync(): Promise<Strategy[]> {
+  if (typeof window === "undefined") return [];
+  const { data: { session } } = await supabase.auth.getSession();
+  if (session?.user) {
+    const { data, error } = await supabase.from('strategies').select('*').eq('user_id', session.user.id);
+    if (!error && data && data.length > 0) {
+       return data.map(d => JSON.parse(d.strategy_json));
+    }
+  }
+  return loadStrategies(); // Fallback
+}
+
+export async function upsertStrategyAsync(s: Strategy) {
+  upsertStrategy(s); // Local optimistic save
+  const { data: { session } } = await supabase.auth.getSession();
+  if (session?.user) {
+    await supabase.from('strategies').upsert({
+      id: s.id,
+      user_id: session.user.id,
+      strategy_json: JSON.stringify(s),
+      updated_at: new Date().toISOString()
+    });
+  }
 }
 
 export function newId() {

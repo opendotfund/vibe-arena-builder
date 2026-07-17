@@ -9,7 +9,13 @@ import {
   emptyStrategy,
   loadStrategies,
 } from "@/lib/strategies";
-import { simulate, type BattleStep } from "@/lib/battle";
+import { Backtester } from "@/lib/backtester";
+
+export type BattleStep = {
+  tick: { minute: string; home_odds: string; away_odds: string; draw_odds: string; market_move: string };
+  a: { bankroll: number; note: string };
+  b: { bankroll: number; note: string };
+};
 
 const search = z.object({
   a: z.string().optional(),
@@ -65,11 +71,47 @@ function VsPage() {
     if (b) setAgentB(list.find((s) => s.id === b) ?? OPPONENT);
   }, [a, b]);
 
-  const steps = useMemo<BattleStep[]>(() => (agentA ? simulate(agentA, agentB, seed) : []), [agentA, agentB, seed]);
-
+  const [slug, setSlug] = useState("super-bowl-champion-2026-731");
+  const [steps, setSteps] = useState<BattleStep[]>([]);
   const [idx, setIdx] = useState(0);
   const [playing, setPlaying] = useState(false);
+  const [loading, setLoading] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const runMatch = async () => {
+    if (!agentA) return;
+    setLoading(true);
+    setIdx(0);
+    setPlaying(false);
+    try {
+      const apiKey = "vd_cJ6EjdkKC6s2ZMJ4kg8pWP8IyDsXoDoiS4wCAG0MG4fW";
+      const ticks = await Backtester.fetchTicks(apiKey, slug);
+      const tradesA = Backtester.runSimulation(agentA, slug, ticks);
+      const tradesB = Backtester.runSimulation(agentB, slug, ticks);
+      
+      const combinedSteps: BattleStep[] = [];
+      let bankA = 10000;
+      let bankB = 10000;
+      
+      ticks.forEach((t) => {
+        const trA = tradesA.find(x => x.timestamp === t.timestamp);
+        const trB = tradesB.find(x => x.timestamp === t.timestamp);
+        if (trA) bankA += trA.pnl;
+        if (trB) bankB += trB.pnl;
+        
+        combinedSteps.push({
+          tick: { minute: new Date(t.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), home_odds: t.home_odds.toFixed(2), away_odds: t.away_odds.toFixed(2), draw_odds: "0", market_move: t.market_move.toFixed(2) },
+          a: { bankroll: bankA, note: trA ? `${trA.result === 'win' ? '+' : '-'}$${Math.abs(trA.pnl).toFixed(0)} on ${trA.side}` : 'skip' },
+          b: { bankroll: bankB, note: trB ? `${trB.result === 'win' ? '+' : '-'}$${Math.abs(trB.pnl).toFixed(0)} on ${trB.side}` : 'skip' },
+        });
+      });
+      setSteps(combinedSteps);
+    } catch (e: any) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (!playing) return;
@@ -77,8 +119,6 @@ function VsPage() {
     timer.current = setTimeout(() => setIdx((i) => i + 1), 550);
     return () => { if (timer.current) clearTimeout(timer.current); };
   }, [playing, idx, steps.length]);
-
-  useEffect(() => { setIdx(0); setPlaying(false); }, [agentA, agentB, seed]);
 
   if (!agentA) return null;
   const step = steps[idx];
@@ -111,8 +151,14 @@ function VsPage() {
             <option value={OPPONENT.id}>Opponent: {OPPONENT.name}</option>
             {saved.filter((s) => s.id !== agentA.id).map((s) => <option key={s.id} value={s.id}>Opponent: {s.name}</option>)}
           </select>
-          <button onClick={() => setSeed((s) => s + 1)} className="rounded-md border border-border px-3 py-2 text-sm hover:bg-secondary inline-flex items-center gap-1">
-            <RotateCcw className="h-4 w-4" /> New match
+          <input 
+            value={slug}
+            onChange={(e) => setSlug(e.target.value)}
+            placeholder="Market (e.g. super-bowl-champion)"
+            className="w-48 rounded-md border border-border bg-background px-3 py-2 text-sm mono"
+          />
+          <button onClick={runMatch} disabled={loading} className="rounded-md bg-primary text-primary-foreground px-3 py-2 text-sm font-semibold glow-sky disabled:opacity-50 inline-flex items-center gap-2">
+             <Swords className="h-4 w-4" /> {loading ? "Fetching..." : "Run Match"}
           </button>
         </div>
       </div>

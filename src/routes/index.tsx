@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { AgentAvatar } from "@/components/AgentAvatar";
 import { ArrowRight, Sparkles, Cpu, Trophy, Wand2 } from "lucide-react";
+import { BuyCoffeeButton } from "../components/BuyCoffeeButton";
 
 export const Route = createFileRoute("/")({
   component: Landing,
@@ -93,6 +94,18 @@ function Landing() {
             </Link>
           </div>
         </div>
+      </section>
+
+      {/* DEV */}
+      <section className="mx-auto max-w-5xl px-6 pb-24 flex flex-col items-center gap-6">
+        <a href="https://x.com/mishastastna" target="_blank" rel="noreferrer" className="glass flex items-center gap-4 rounded-full px-8 py-4 hover:bg-secondary/50 transition-colors">
+          <img src="/dev-pfp.jpg" alt="Dev Profile Picture" className="h-12 w-12 rounded-full object-cover" />
+          <div className="text-left">
+            <div className="text-base font-semibold">Follow the dev!</div>
+            <div className="text-sm text-muted-foreground">Misha Stastna</div>
+          </div>
+        </a>
+        <BuyCoffeeButton />
       </section>
     </main>
   );

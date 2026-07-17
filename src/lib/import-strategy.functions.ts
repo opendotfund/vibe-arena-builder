@@ -36,7 +36,13 @@ const StrategySchema = z.object({
   rules: z.array(RuleSchema),
 });
 
-const SYSTEM_PROMPT = `You convert a user's free-form sports-betting strategy into strict JSON.
+const SYSTEM_PROMPT = `You convert a user's free-form sports-betting strategy OR an algorithmic trading script (like MQL4/MQL5) into strict JSON.
+
+If the user provides an MQL or other algorithmic trading snippet, extract the core trading logic and translate them into sports-betting equivalents. For example:
+- A "buy" or "long" signal translates to a "home" bet.
+- A "sell" or "short" signal translates to an "away" bet.
+- Indicators like "RSI", "MACD", or price momentum should be approximated using available condition fields like "market_move" (momentum) or "implied_home_prob" (strength).
+- Try to capture the essence of the algo using the available fields.
 
 Return ONLY JSON matching this TypeScript type:
 
