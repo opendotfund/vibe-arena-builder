@@ -11,7 +11,7 @@ function Landing() {
     <main className="relative overflow-hidden">
       {/* HERO */}
       <section className="relative">
-        <div className="absolute inset-0 grid-bg opacity-40" />
+        <div className="absolute inset-0 opacity-40" />
         <div className="relative mx-auto max-w-7xl px-6 pt-20 pb-24 text-center">
           <div className="mx-auto inline-flex items-center gap-2 rounded-full border border-border/70 bg-background/60 px-3 py-1 text-xs mono tracking-widest">
             <Sparkles className="h-3 w-3 text-primary" /> VIBE-CODE YOUR BETTING AGENT
@@ -27,7 +27,7 @@ function Landing() {
           </p>
 
           <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
-            <Link to="/build" className="inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-3 font-semibold text-primary-foreground glow-cyan">
+            <Link to="/build" className="inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-3 font-semibold text-primary-foreground glow-sky">
               Create an agent <ArrowRight className="h-4 w-4" />
             </Link>
             <Link to="/vs" className="inline-flex items-center gap-2 rounded-lg border border-border px-5 py-3 font-semibold hover:bg-secondary">
@@ -47,13 +47,13 @@ function Landing() {
         <div className="flex animate-marquee whitespace-nowrap mono text-xs tracking-widest text-muted-foreground gap-10">
           {Array.from({ length: 2 }).map((_, k) => (
             <div key={k} className="flex gap-10">
-              <span>▲ CYAN.AGENT bet HOME @ 2.35 → +48u</span>
+              <span>▲ AGENT ONE bet HOME @ 2.35 → +48u</span>
               <span>● MARKET move −4.2% (5m)</span>
-              <span>▼ MAGENTA.AGENT bet AWAY @ 3.10 → −20u</span>
+              <span>▼ AGENT TWO bet AWAY @ 3.10 → −20u</span>
               <span>◆ ROUND 7 · 30m to KO</span>
-              <span>▲ CYAN.AGENT bet DRAW @ 3.25 → +65u</span>
+              <span>▲ AGENT ONE bet DRAW @ 3.25 → +65u</span>
               <span>● IMPLIED_HOME_PROB 41.3%</span>
-              <span>▼ MAGENTA.AGENT skip · bankroll 78%</span>
+              <span>▼ AGENT TWO skip · bankroll 78%</span>
               <span>◆ TX ODDS · WORLDCUP FEED · LIVE</span>
             </div>
           ))}
@@ -72,7 +72,7 @@ function Landing() {
             { icon: Cpu, title: "Or import in English", desc: "Paste your napkin strategy. Gemini rewrites it into structured rules your agent can run." },
             { icon: Trophy, title: "Battle head-to-head", desc: "Your agent squares off against another player's on a live TX Odds feed. Winner takes the bankroll." },
           ].map(({ icon: Icon, title, desc }) => (
-            <div key={title} className="surface-card rounded-xl p-6">
+            <div key={title} className="glass rounded-xl p-6">
               <Icon className="h-6 w-6 text-primary" />
               <h3 className="mt-4 text-xl font-semibold">{title}</h3>
               <p className="mt-2 text-sm text-muted-foreground">{desc}</p>
@@ -83,12 +83,12 @@ function Landing() {
 
       {/* CTA */}
       <section className="mx-auto max-w-5xl px-6 pb-24">
-        <div className="surface-card rounded-2xl p-10 text-center relative overflow-hidden">
-          <div className="absolute inset-0 grid-bg opacity-30" />
+        <div className="glass rounded-2xl p-10 text-center relative overflow-hidden">
+          <div className="absolute inset-0 opacity-30" />
           <div className="relative">
             <h2 className="text-4xl font-bold">Ready to deploy?</h2>
             <p className="mt-3 text-muted-foreground">Your first agent takes about 90 seconds.</p>
-            <Link to="/build" className="mt-6 inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-3 font-semibold text-primary-foreground glow-cyan">
+            <Link to="/build" className="mt-6 inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-3 font-semibold text-primary-foreground glow-sky">
               Build my agent <ArrowRight className="h-4 w-4" />
             </Link>
           </div>
@@ -100,15 +100,15 @@ function Landing() {
 
 function ArenaPreview() {
   return (
-    <div className="surface-card relative overflow-hidden rounded-2xl p-8">
-      <div className="absolute inset-0 grid-bg opacity-30" />
+    <div className="glass relative overflow-hidden rounded-2xl p-8">
+      <div className="absolute inset-0 opacity-30" />
       <div className="relative grid grid-cols-3 items-center gap-6">
         <div className="flex flex-col items-center gap-4">
-          <AgentAvatar side="cyan" name="CYAN.AGENT" />
+          <AgentAvatar side="sky" name="AGENT ONE" />
           <div className="w-full rounded-lg border border-border/70 bg-background/50 p-3 text-left">
             <div className="mono text-[10px] text-muted-foreground">BANKROLL</div>
             <div className="text-2xl font-bold text-primary">$1,240</div>
-            <BarGauge pct={72} color="cyan" />
+            <BarGauge pct={72} color="sky" />
           </div>
         </div>
 
@@ -124,11 +124,11 @@ function ArenaPreview() {
         </div>
 
         <div className="flex flex-col items-center gap-4">
-          <AgentAvatar side="magenta" name="MAGENTA.AGENT" />
+          <AgentAvatar side="rose" name="AGENT TWO" />
           <div className="w-full rounded-lg border border-border/70 bg-background/50 p-3 text-left">
             <div className="mono text-[10px] text-muted-foreground">BANKROLL</div>
-            <div className="text-2xl font-bold" style={{ color: "var(--magenta)" }}>$860</div>
-            <BarGauge pct={44} color="magenta" />
+            <div className="text-2xl font-bold" style={{ color: "var(--rose)" }}>$860</div>
+            <BarGauge pct={44} color="rose" />
           </div>
         </div>
       </div>
@@ -136,13 +136,13 @@ function ArenaPreview() {
   );
 }
 
-function BarGauge({ pct, color }: { pct: number; color: "cyan" | "magenta" }) {
+function BarGauge({ pct, color }: { pct: number; color: "sky" | "rose" }) {
   return (
     <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-secondary">
       <div
         style={{
           width: `${pct}%`,
-          background: color === "cyan" ? "var(--cyan)" : "var(--magenta)",
+          background: color === "sky" ? "var(--sky)" : "var(--rose)",
           animation: "bar-fill 1.4s ease-out",
         }}
         className="h-full"

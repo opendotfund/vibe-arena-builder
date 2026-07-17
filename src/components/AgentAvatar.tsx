@@ -1,7 +1,7 @@
 import { cn } from "@/lib/utils";
 
 type Props = {
-  side: "cyan" | "magenta";
+  side: "sky" | "rose";
   name?: string;
   className?: string;
   size?: number;
@@ -9,29 +9,27 @@ type Props = {
 };
 
 export function AgentAvatar({ side, name, className, size = 96, animated = true }: Props) {
-  const color = side === "cyan" ? "var(--cyan)" : "var(--magenta)";
-  const glow = side === "cyan" ? "glow-cyan" : "glow-magenta";
-  const pulse = side === "cyan" ? "animate-pulse-cyan" : "animate-pulse-magenta";
+  const color = side === "sky" ? "var(--sky)" : "var(--rose)";
+  const glow = side === "sky" ? "glow-sky" : "glow-rose";
   return (
     <div className={cn("flex flex-col items-center gap-3", className)}>
       <div
-        className={cn("relative rounded-full", glow, animated && pulse)}
-        style={{ width: size, height: size, background: `radial-gradient(circle at 30% 30%, ${color}, transparent 70%)` }}
+        className={cn("relative rounded-full glass", glow, animated && "animate-soft-pulse")}
+        style={{ width: size, height: size }}
       >
         <div
-          className={cn("absolute inset-2 rounded-full border-2", animated && "animate-float")}
-          style={{ borderColor: color, background: "oklch(0.14 0.03 270 / 0.85)" }}
+          className={cn("absolute inset-3 rounded-full", animated && "animate-float")}
+          style={{
+            background: `radial-gradient(circle at 30% 25%, ${color}, transparent 70%)`,
+            border: "1px solid oklch(1 0 0 / 0.5)",
+          }}
         >
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="grid grid-cols-2 gap-1.5">
-              <span className="h-2 w-2 rounded-full animate-spark" style={{ background: color }} />
-              <span className="h-2 w-2 rounded-full animate-spark" style={{ background: color, animationDelay: "0.4s" }} />
-            </div>
-          </div>
-          <div className="absolute inset-x-4 bottom-4 h-0.5 rounded-full" style={{ background: color, opacity: 0.6 }} />
+          <div className="absolute inset-0 rounded-full" style={{
+            background: "radial-gradient(circle at 35% 25%, oklch(1 0 0 / 0.55), transparent 45%)",
+          }} />
         </div>
       </div>
-      {name && <div className="mono text-xs tracking-widest opacity-80">{name}</div>}
+      {name && <div className="mono text-[11px] tracking-wide text-muted-foreground">{name}</div>}
     </div>
   );
 }
