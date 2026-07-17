@@ -101,18 +101,19 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function Nav() {
   return (
-    <header className="sticky top-0 z-40 border-b border-border/60 bg-background/70 backdrop-blur">
-      <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
+    <header className="sticky top-0 z-40">
+      <div className="mx-auto mt-3 flex max-w-6xl items-center justify-between rounded-full glass px-5 py-2.5">
         <Link to="/" className="flex items-center gap-2">
-          <span className="inline-block h-3 w-3 rounded-full bg-primary glow-sky" />
-          <span className="mono text-sm tracking-widest">AGENT<span className="text-gradient-vs font-bold">VS</span></span>
+          <span className="inline-block h-2.5 w-2.5 rounded-full bg-primary" />
+          <span className="text-sm font-semibold tracking-tight">agent<span className="text-gradient-vs">vs</span></span>
         </Link>
-        <nav className="flex items-center gap-2 text-sm">
-          <Link to="/build" className="rounded-md px-3 py-1.5 hover:bg-secondary" activeProps={{ className: "bg-secondary" }}>Build</Link>
-          <Link to="/vs" className="rounded-md px-3 py-1.5 hover:bg-secondary" activeProps={{ className: "bg-secondary" }}>Arena</Link>
-          <Link to="/build" className="ml-2 rounded-md bg-primary px-3 py-1.5 font-semibold text-primary-foreground glow-sky">New agent</Link>
+        <nav className="flex items-center gap-1 text-sm">
+          <Link to="/build" className="rounded-full px-3 py-1.5 text-muted-foreground hover:text-foreground" activeProps={{ className: "bg-secondary/70 text-foreground" }}>Build</Link>
+          <Link to="/vs" className="rounded-full px-3 py-1.5 text-muted-foreground hover:text-foreground" activeProps={{ className: "bg-secondary/70 text-foreground" }}>Arena</Link>
+          <Link to="/build" className="ml-2 rounded-full bg-primary px-3.5 py-1.5 text-primary-foreground shadow-sm hover:opacity-90">New agent</Link>
         </nav>
       </div>
+
     </header>
   );
 }
@@ -123,7 +124,8 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       <Nav />
       <Outlet />
-      <Toaster theme="dark" position="top-center" />
+      <Toaster theme="light" position="top-center" />
     </QueryClientProvider>
   );
+
 }
