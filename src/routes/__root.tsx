@@ -105,6 +105,8 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function Nav() {
   const [user, setUser] = useState<User | null>(null);
+  const [email, setEmail] = useState("");
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -116,7 +118,18 @@ function Nav() {
     return () => subscription.unsubscribe();
   }, []);
 
-  const login = () => supabase.auth.signInWithOAuth({ provider: "google" });
+  const login = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email) return;
+    setLoading(true);
+    const { error } = await supabase.auth.signInWithOtp({ 
+      email, 
+      options: { emailRedirectTo: window.location.origin } 
+    });
+    if (error) toast.error(error.message);
+    else toast.success("Magic link sent! Check your email.");
+    setLoading(false);
+  };
   const logout = () => supabase.auth.signOut();
 
   return (
@@ -137,11 +150,25 @@ function Nav() {
           <div className="ml-4 pl-4 border-l border-border/50 flex items-center gap-2">
             {user ? (
               <>
-                <img src={user.user_metadata.avatar_url} alt="Avatar" className="h-6 w-6 rounded-full" />
+                <div className="h-6 w-6 rounded-full bg-primary/20 flex items-center justify-center text-xs font-bold text-primary uppercase">
+                  {user.email?.[0] ?? "U"}
+                </div>
                 <button onClick={logout} className="text-xs font-medium text-muted-foreground hover:text-foreground">Log out</button>
               </>
             ) : (
-              <button onClick={login} className="text-xs font-medium text-primary hover:text-primary/80">Sign in with Google</button>
+              <form onSubmit={login} className="flex items-center gap-2">
+                <input 
+                  type="email" 
+                  placeholder="Enter email..." 
+                  value={email} 
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="h-7 w-40 rounded-md border border-border/50 bg-background/50 px-2 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                  required
+                />
+                <button type="submit" disabled={loading} className="text-xs font-medium text-primary hover:text-primary/80 disabled:opacity-50 whitespace-nowrap">
+                  {loading ? "Sending..." : "Send link"}
+                </button>
+              </form>
             )}
           </div>
         </nav>
