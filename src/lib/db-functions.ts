@@ -3,10 +3,12 @@ import { z } from "zod";
 import { createClient } from "@supabase/supabase-js";
 
 const getSupabase = () => {
-  return createClient(
-    process.env.VITE_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY! // Bypass RLS completely
-  );
+  const url = import.meta.env.VITE_SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) {
+    throw new Error(`Missing Supabase config. URL: ${!!url}, Key: ${!!key}`);
+  }
+  return createClient(url, key);
 };
 
 export const getStrategiesDb = createServerFn({ method: "POST" })
