@@ -114,8 +114,9 @@ function Nav() {
           <span className="text-xs font-medium text-muted-foreground whitespace-nowrap hidden sm:block">Powered by TXOdds</span>
         </div>
         <nav className="flex items-center gap-1 text-sm">
+          <Link to="/build" className="rounded-full px-3 py-1.5 text-muted-foreground hover:text-foreground" activeProps={{ className: "bg-secondary/70 text-foreground" }}>Build</Link>
           <Link to="/vs" className="rounded-full px-3 py-1.5 text-muted-foreground hover:text-foreground" activeProps={{ className: "bg-secondary/70 text-foreground" }}>Arena</Link>
-          <Link to="/build" className="ml-2 rounded-full bg-primary px-3.5 py-1.5 text-primary-foreground shadow-sm hover:opacity-90">Backtesting Hub</Link>
+          <Link to="/backtest" className="ml-2 rounded-full bg-primary px-3.5 py-1.5 text-primary-foreground shadow-sm hover:opacity-90">Backtesting Hub</Link>
           
           <div className="ml-4 pl-4 border-l border-border/50 flex items-center gap-2">
             <SignedOut>

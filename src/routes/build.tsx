@@ -19,7 +19,6 @@ import {
   strategyToPseudocode,
 } from "@/lib/strategies";
 import { importStrategy } from "@/lib/import-strategy.functions";
-import { BacktestPanel } from "@/components/BacktestPanel";
 
 export const Route = createFileRoute("/build")({
   head: () => ({
@@ -148,7 +147,7 @@ function Build() {
               onClick={() => setActiveTab("ai")}
               className={`pb-2 text-sm font-semibold border-b-2 transition-colors flex items-center gap-2 ${activeTab === "ai" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}
             >
-              <Bot className="h-4 w-4" /> AI & Backtest
+              <Bot className="h-4 w-4" /> AI Generator
             </button>
             <button 
               onClick={() => setActiveTab("visual")}
@@ -175,9 +174,6 @@ function Build() {
             {activeTab === "ai" && (
               <div className="space-y-8">
                 <AiBuilderPanel onImport={(s) => setCurrent({ ...s, id: current.id, name: current.name, description: current.description || s.description, createdAt: current.createdAt, updatedAt: Date.now() })} />
-                <div className="border-t border-border/50 pt-8">
-                  <BacktestPanel strategy={current} />
-                </div>
               </div>
             )}
 

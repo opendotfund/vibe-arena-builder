@@ -9,7 +9,8 @@ import {
   emptyStrategy,
   loadStrategies,
 } from "@/lib/strategies";
-import { Backtester } from "@/lib/backtester";
+import { Backtester, type TradeResult } from "@/lib/backtester";
+import { TerminalChart } from "@/components/TerminalChart";
 
 export type BattleStep = {
   tick: { minute: string; home_odds: string; away_odds: string; draw_odds: string; market_move: string };
@@ -76,6 +77,8 @@ function VsPage() {
   const [idx, setIdx] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [tradesA, setTradesA] = useState<TradeResult[]>([]);
+  const [tradesB, setTradesB] = useState<TradeResult[]>([]);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const runMatch = async () => {
@@ -86,23 +89,26 @@ function VsPage() {
     try {
       const apiKey = "vd_cJ6EjdkKC6s2ZMJ4kg8pWP8IyDsXoDoiS4wCAG0MG4fW";
       const ticks = await Backtester.fetchTicks(apiKey, slug);
-      const tradesA = Backtester.runSimulation(agentA, slug, ticks);
-      const tradesB = Backtester.runSimulation(agentB, slug, ticks);
+      const trA = Backtester.runSimulation(agentA, slug, ticks);
+      const trB = Backtester.runSimulation(agentB, slug, ticks);
+      
+      setTradesA(trA);
+      setTradesB(trB);
       
       const combinedSteps: BattleStep[] = [];
       let bankA = 10000;
       let bankB = 10000;
       
       ticks.forEach((t) => {
-        const trA = tradesA.find(x => x.timestamp === t.timestamp);
-        const trB = tradesB.find(x => x.timestamp === t.timestamp);
-        if (trA) bankA += trA.pnl;
-        if (trB) bankB += trB.pnl;
+        const tA = trA.find(x => x.timestamp === t.timestamp);
+        const tB = trB.find(x => x.timestamp === t.timestamp);
+        if (tA) bankA += tA.pnl;
+        if (tB) bankB += tB.pnl;
         
         combinedSteps.push({
           tick: { minute: new Date(t.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), home_odds: t.home_odds.toFixed(2), away_odds: t.away_odds.toFixed(2), draw_odds: "0", market_move: t.market_move.toFixed(2) },
-          a: { bankroll: bankA, note: trA ? `${trA.result === 'win' ? '+' : '-'}$${Math.abs(trA.pnl).toFixed(0)} on ${trA.side}` : 'skip' },
-          b: { bankroll: bankB, note: trB ? `${trB.result === 'win' ? '+' : '-'}$${Math.abs(trB.pnl).toFixed(0)} on ${trB.side}` : 'skip' },
+          a: { bankroll: bankA, note: tA ? `${tA.result === 'win' ? '+' : '-'}$${Math.abs(tA.pnl).toFixed(0)} on ${tA.side}` : 'skip' },
+          b: { bankroll: bankB, note: tB ? `${tB.result === 'win' ? '+' : '-'}$${Math.abs(tB.pnl).toFixed(0)} on ${tB.side}` : 'skip' },
         });
       });
       setSteps(combinedSteps);
@@ -199,10 +205,10 @@ function VsPage() {
         </div>
       </div>
 
-      {/* Timeline */}
-      <div className="mt-6 grid gap-6 lg:grid-cols-2">
-        <TimelineCard side="sky" title={agentA.name} steps={steps} pick={(s) => s.a} idx={idx} onSelect={setIdx} />
-        <TimelineCard side="rose" title={agentB.name} steps={steps} pick={(s) => s.b} idx={idx} onSelect={setIdx} />
+      {/* Trading Terminals */}
+      <div className="mt-6 grid gap-6 lg:grid-cols-2 h-[500px]">
+        <TerminalChart trades={tradesA} title={`AGENT: ${agentA.name.toUpperCase()}`} pnlOnly={true} />
+        <TerminalChart trades={tradesB} title={`AGENT: ${agentB.name.toUpperCase()}`} pnlOnly={true} />
       </div>
 
       <div className="mt-8 text-center">
@@ -227,50 +233,5 @@ function PlayerPanel({ side, name, bankroll, note, highlight }: { side: "sky" | 
         <div className="mt-2 mono text-[11px] text-foreground/80 truncate">{note}</div>
       </div>
     </div>
-  );
-}
-
-function TimelineCard({
-  side, title, steps, pick, idx, onSelect,
-}: { side: "sky" | "rose"; title: string; steps: BattleStep[]; pick: (s: BattleStep) => { bankroll: number; note: string }; idx: number; onSelect: (i: number) => void }) {
-  const color = side === "sky" ? "var(--sky)" : "var(--rose)";
-  return (
-    <div className="glass rounded-xl p-4">
-      <div className="flex items-center justify-between">
-        <div className="mono text-[10px] tracking-widest" style={{ color }}>{title}</div>
-        <div className="mono text-[10px] text-muted-foreground">bankroll over time</div>
-      </div>
-      <Sparkline values={steps.map((s) => pick(s).bankroll)} color={color} />
-      <div className="mt-3 max-h-56 space-y-1 overflow-auto pr-1">
-        {steps.map((s, i) => (
-          <button
-            key={i}
-            onClick={() => onSelect(i)}
-            className={`w-full rounded px-2 py-1 text-left mono text-[11px] hover:bg-secondary ${i === idx ? "bg-secondary" : ""}`}
-          >
-            <span className="text-muted-foreground">t{String(i).padStart(2, "0")}</span>{" "}
-            <span style={{ color }}>${pick(s).bankroll.toFixed(0)}</span>{" "}
-            <span className="text-foreground/80">{pick(s).note}</span>
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function Sparkline({ values, color }: { values: number[]; color: string }) {
-  if (values.length === 0) return null;
-  const min = Math.min(...values), max = Math.max(...values);
-  const range = max - min || 1;
-  const w = 400, h = 60;
-  const pts = values.map((v, i) => {
-    const x = (i / (values.length - 1 || 1)) * w;
-    const y = h - ((v - min) / range) * h;
-    return `${x.toFixed(1)},${y.toFixed(1)}`;
-  }).join(" ");
-  return (
-    <svg viewBox={`0 0 ${w} ${h}`} className="mt-2 h-16 w-full">
-      <polyline fill="none" stroke={color} strokeWidth="2" points={pts} />
-    </svg>
   );
 }
