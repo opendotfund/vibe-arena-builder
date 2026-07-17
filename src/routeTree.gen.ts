@@ -10,12 +10,18 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as VsRouteImport } from './routes/vs'
+import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as BuildRouteImport } from './routes/build'
 import { Route as IndexRouteImport } from './routes/index'
 
 const VsRoute = VsRouteImport.update({
   id: '/vs',
   path: '/vs',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
+  id: '/sitemap.xml',
+  path: '/sitemap.xml',
   getParentRoute: () => rootRouteImport,
 } as any)
 const BuildRoute = BuildRouteImport.update({
@@ -32,30 +38,34 @@ const IndexRoute = IndexRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/build': typeof BuildRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/vs': typeof VsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/build': typeof BuildRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/vs': typeof VsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/build': typeof BuildRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/vs': typeof VsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/build' | '/vs'
+  fullPaths: '/' | '/build' | '/sitemap.xml' | '/vs'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/build' | '/vs'
-  id: '__root__' | '/' | '/build' | '/vs'
+  to: '/' | '/build' | '/sitemap.xml' | '/vs'
+  id: '__root__' | '/' | '/build' | '/sitemap.xml' | '/vs'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   BuildRoute: typeof BuildRoute
+  SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   VsRoute: typeof VsRoute
 }
 
@@ -66,6 +76,13 @@ declare module '@tanstack/react-router' {
       path: '/vs'
       fullPath: '/vs'
       preLoaderRoute: typeof VsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sitemap.xml': {
+      id: '/sitemap.xml'
+      path: '/sitemap.xml'
+      fullPath: '/sitemap.xml'
+      preLoaderRoute: typeof SitemapDotxmlRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/build': {
@@ -88,6 +105,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   BuildRoute: BuildRoute,
+  SitemapDotxmlRoute: SitemapDotxmlRoute,
   VsRoute: VsRoute,
 }
 export const routeTree = rootRouteImport
