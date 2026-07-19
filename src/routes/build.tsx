@@ -45,6 +45,7 @@ function Build() {
   const [list, setList] = useState<Strategy[]>([]);
   const [current, setCurrent] = useState<Strategy>(() => emptyStrategy());
   const [activeTab, setActiveTab] = useState<"ai" | "visual">("ai");
+  const [initialized, setInitialized] = useState(false);
   
   const { user } = useUser();
   const userId = user?.id;
@@ -52,20 +53,39 @@ function Build() {
   const search = Route.useSearch();
 
   useEffect(() => {
+    if (initialized) return;
     loadStrategiesAsync(userId).then(l => {
-      setList(l);
-      if (l[0]) setCurrent(l[0]);
+      if (search.new) {
+        const fresh = emptyStrategy();
+        fresh.name = `My Strategy ${l.length + 1}`;
+        setList([fresh, ...l]);
+        setCurrent(fresh);
+        setActiveTab("ai");
+        navigate({ to: "/build", search: {}, replace: true });
+      } else {
+        setList(l);
+        if (l[0]) {
+          setCurrent(l[0]);
+          setActiveTab(l[0].rules.length > 0 ? "visual" : "ai");
+        }
+      }
+      setInitialized(true);
     });
-  }, [userId]);
+  }, [userId, search.new, navigate, initialized]);
 
-  useEffect(() => {
-    if (search.new) {
-      setCurrent(emptyStrategy());
-      navigate({ to: "/build", search: {}, replace: true });
+  const update = (patch: Partial<Strategy>) => {
+    setCurrent((s) => {
+      const next = { ...s, ...patch, updatedAt: Date.now() };
+      setList(prev => prev.map(item => item.id === next.id ? next : item));
+      return next;
+    });
+  };
+
+  const updateTabFromAI = () => {
+    if (activeTab === "ai" && current.rules.length > 0) {
+      setActiveTab("visual");
     }
-  }, [search.new, navigate]);
-
-  const update = (patch: Partial<Strategy>) => setCurrent((s) => ({ ...s, ...patch, updatedAt: Date.now() }));
+  };
 
   const updateRule = (rid: string, patch: Partial<Rule>) =>
     update({ rules: current.rules.map((r) => (r.id === rid ? { ...r, ...patch } : r)) });
@@ -92,7 +112,18 @@ function Build() {
     if (current.id === id) setCurrent(l[0] ?? emptyStrategy());
   };
 
-  const newStrat = () => setCurrent(emptyStrategy());
+  const newStrat = () => {
+    const fresh = emptyStrategy();
+    fresh.name = `My Strategy ${list.length + 1}`;
+    setCurrent(fresh);
+    setList(prev => [fresh, ...prev]);
+    setActiveTab("ai");
+  };
+
+  const runBacktest = async () => {
+    await upsertStrategyAsync(current, userId);
+    navigate({ to: "/backtest", search: { agent: current.id } });
+  };
 
   const sendToBattle = async () => {
     await upsertStrategyAsync(current, userId);
@@ -110,8 +141,8 @@ function Build() {
           <button onClick={newStrat} className="inline-flex items-center gap-2 rounded-md border border-border px-3 py-2 text-sm hover:bg-secondary">
             <Plus className="h-4 w-4" /> New
           </button>
-          <button onClick={save} className="inline-flex items-center gap-2 rounded-md bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground glow-sky">
-            <Save className="h-4 w-4" /> Save
+          <button onClick={runBacktest} className="inline-flex items-center gap-2 rounded-md bg-secondary border border-border/50 hover:bg-secondary/80 px-3 py-2 text-sm font-semibold text-secondary-foreground">
+            <Bot className="h-4 w-4" /> Backtest
           </button>
           <button onClick={sendToBattle} className="inline-flex items-center gap-2 rounded-md bg-accent px-3 py-2 text-sm font-semibold text-accent-foreground glow-rose">
             <Play className="h-4 w-4" /> Battle
@@ -121,8 +152,13 @@ function Build() {
 
       <div className="grid gap-6 lg:grid-cols-[220px_1fr_320px]">
         {/* Saved strategies */}
-        <aside className="glass rounded-xl p-3 h-fit">
-          <div className="mono text-[10px] text-muted-foreground px-2 py-1 tracking-widest">MY AGENTS</div>
+        <aside className="glass rounded-xl p-3 h-fit flex flex-col gap-2">
+          <div className="flex items-center justify-between px-2 py-1">
+            <div className="mono text-[10px] text-muted-foreground tracking-widest">MY AGENTS</div>
+            <button onClick={newStrat} className="text-[10px] text-primary hover:underline flex items-center gap-1">
+              <Plus className="h-3 w-3" /> New Agent
+            </button>
+          </div>
           {list.length === 0 && <div className="px-2 py-6 text-xs text-muted-foreground">No agents yet. Save one to see it here.</div>}
           <ul className="space-y-1">
             {list.map((s) => (
@@ -173,7 +209,27 @@ function Build() {
           <div className="mt-8">
             {activeTab === "ai" && (
               <div className="space-y-8">
-                <AiBuilderPanel onImport={(s) => setCurrent({ ...s, id: current.id, name: current.name, description: current.description || s.description, createdAt: current.createdAt, updatedAt: Date.now() })} />
+                <AiBuilderPanel 
+                  hasRules={current.rules.length > 0}
+                  isNewStrategy={current.createdAt === current.updatedAt}
+                  onImport={(s) => {
+                    const isDefaultName = current.name.startsWith("My Strategy") || current.name === "Untitled strategy";
+                    const nextName = (isDefaultName && s.name) ? s.name : current.name;
+                    
+                    const next = { 
+                      ...s, 
+                      id: current.id, 
+                      name: nextName, 
+                      description: current.description || s.description, 
+                      createdAt: current.createdAt, 
+                      updatedAt: Date.now() 
+                    };
+                    
+                    setCurrent(next);
+                    setList(prev => prev.map(item => item.id === next.id ? next : item));
+                    setActiveTab("visual");
+                  }} 
+                />
               </div>
             )}
 
@@ -211,10 +267,37 @@ function Build() {
             <div className="mt-4 text-[11px] text-muted-foreground">
               This is the program your agent runs each market tick. Rules are evaluated top-to-bottom; the first matching rule fires.
             </div>
-            <button onClick={sendToBattle} className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-md bg-accent px-3 py-2 text-sm font-semibold text-accent-foreground glow-rose">
+            <button onClick={runBacktest} className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-md bg-secondary border border-border/50 hover:bg-secondary/80 px-3 py-2 text-sm font-semibold text-secondary-foreground">
+              <Bot className="h-4 w-4" /> Backtest First
+            </button>
+            <button onClick={sendToBattle} className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-md bg-accent px-3 py-2 text-sm font-semibold text-accent-foreground glow-rose">
               <Play className="h-4 w-4" /> Send to arena
             </button>
           </aside>
+          
+          {current.lastBacktest && (
+            <aside className="glass rounded-xl p-4">
+              <div className="mb-2 flex items-center gap-2 mono text-[10px] text-muted-foreground tracking-widest uppercase">
+                <Sparkles className="h-3.5 w-3.5" /> PAST BACKTESTS
+              </div>
+              <div className="mt-2 flex flex-col gap-1">
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-muted-foreground">Latest PNL</span>
+                  <span className={`font-semibold ${current.lastBacktest.pnl >= 0 ? "text-green-400" : "text-rose-400"}`}>
+                    {current.lastBacktest.pnl >= 0 ? "+" : ""}${current.lastBacktest.pnl.toFixed(2)}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-muted-foreground">Trades</span>
+                  <span className="font-mono">{current.lastBacktest.tradesCount}</span>
+                </div>
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-muted-foreground">Market</span>
+                  <span className="font-mono text-xs truncate max-w-[120px]" title={current.lastBacktest.marketSlug}>{current.lastBacktest.marketSlug}</span>
+                </div>
+              </div>
+            </aside>
+          )}
         </div>
       </div>
     </main>
@@ -308,10 +391,16 @@ function RuleCard({
   );
 }
 
-function AiBuilderPanel({ onImport }: { onImport: (s: Strategy) => void }) {
+function AiBuilderPanel({ onImport, hasRules, isNewStrategy }: { onImport: (s: Strategy) => void, hasRules?: boolean, isNewStrategy?: boolean }) {
   const [text, setText] = useState("Bet 3% on the home team whenever their odds are 2.5 or higher and the implied probability is below 45%. If we've already used more than 30% of bankroll, skip.");
   const [busy, setBusy] = useState(false);
+  const [isEditing, setIsEditing] = useState(isNewStrategy || !hasRules);
   const run = useServerFn(importStrategy);
+
+  // If the agent already has rules but we re-mount, we should lock it down by default unless it's brand new
+  useEffect(() => {
+    setIsEditing(isNewStrategy || !hasRules);
+  }, [hasRules, isNewStrategy]);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -329,12 +418,31 @@ function AiBuilderPanel({ onImport }: { onImport: (s: Strategy) => void }) {
       const parsed = await run({ data: { text } });
       onImport(parsed as Strategy);
       toast.success("Strategy generated from AI successfully!");
+      setIsEditing(false); // lock it back down
     } catch (e: any) {
       toast.error(e?.message ?? "Import failed");
     } finally {
       setBusy(false);
     }
   };
+
+  if (!isEditing) {
+    return (
+      <div className="bg-background/40 rounded-lg p-5 border border-border/50 text-center">
+        <Sparkles className="h-6 w-6 text-primary mx-auto mb-3" />
+        <h3 className="text-sm font-medium mb-2">You already have rules built for this agent.</h3>
+        <p className="text-xs text-muted-foreground mb-4">
+          Using the AI Generator again will completely overwrite your existing rules.
+        </p>
+        <button 
+          onClick={() => setIsEditing(true)}
+          className="inline-flex items-center gap-2 rounded-md border border-border px-4 py-2 text-sm hover:bg-secondary"
+        >
+          <Bot className="h-4 w-4" /> Edit with AI
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-background/40 rounded-lg p-5 border border-border/50">
@@ -346,6 +454,12 @@ function AiBuilderPanel({ onImport }: { onImport: (s: Strategy) => void }) {
         Describe your betting logic or upload an algorithmic trading script (MQL4/MQL5). Gemini will convert it into structured rules.
       </p>
       
+      {hasRules && !isNewStrategy && (
+        <div className="mt-3 text-xs text-rose-400 bg-rose-400/10 p-2 rounded border border-rose-400/20">
+          <strong>Warning:</strong> Generating new rules will overwrite your existing visual rules.
+        </div>
+      )}
+
       <textarea
         value={text}
         onChange={(e) => setText(e.target.value)}
@@ -353,19 +467,24 @@ function AiBuilderPanel({ onImport }: { onImport: (s: Strategy) => void }) {
         className="mt-4 w-full rounded-md border border-border bg-background/60 p-3 text-sm mono outline-none focus:ring-1 focus:ring-primary"
       />
       
-      <div className="mt-4 flex items-center justify-between">
+      <div className="mt-4 flex items-center justify-between flex-wrap gap-4">
         <label className="cursor-pointer inline-flex items-center gap-1.5 text-xs text-primary hover:underline font-medium">
           <FileCode2 className="h-4 w-4" /> Upload .mq4 / .mq5 file
           <input type="file" accept=".mq4,.mq5,.txt" className="hidden" onChange={handleFileUpload} />
         </label>
-        <button
-          onClick={submit}
-          disabled={busy}
-          className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground glow-sky disabled:opacity-50"
-        >
-          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-          {busy ? "Generating…" : "Generate Rules"}
-        </button>
+        <div className="flex items-center gap-2">
+          {hasRules && (
+            <button onClick={() => setIsEditing(false)} className="text-xs text-muted-foreground hover:text-foreground px-2 py-2">Cancel</button>
+          )}
+          <button
+            onClick={submit}
+            disabled={busy}
+            className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground glow-sky disabled:opacity-50"
+          >
+            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+            {busy ? "Generating…" : "Generate Rules"}
+          </button>
+        </div>
       </div>
     </div>
   );

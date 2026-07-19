@@ -111,12 +111,11 @@ function Nav() {
             <img src="/txodds.png" alt="TXOdds" className="h-6 w-6 rounded-full" />
             <span className="text-sm font-semibold tracking-tight">agent<span className="text-gradient-vs">vs</span></span>
           </Link>
-          <span className="text-xs font-medium text-muted-foreground whitespace-nowrap hidden sm:block">Powered by TXOdds</span>
         </div>
         <nav className="flex items-center gap-1 text-sm">
           <Link to="/build" className="rounded-full px-3 py-1.5 text-muted-foreground hover:text-foreground" activeProps={{ className: "bg-secondary/70 text-foreground" }}>Build</Link>
-          <Link to="/vs" className="rounded-full px-3 py-1.5 text-muted-foreground hover:text-foreground" activeProps={{ className: "bg-secondary/70 text-foreground" }}>Arena</Link>
-          <Link to="/backtest" className="ml-2 rounded-full bg-primary px-3.5 py-1.5 text-primary-foreground shadow-sm hover:opacity-90">Backtesting Hub</Link>
+          <Link to="/backtest" className="rounded-full px-3 py-1.5 text-muted-foreground hover:text-foreground" activeProps={{ className: "bg-secondary/70 text-foreground" }}>Backtest</Link>
+          <Link to="/vs" className="ml-2 rounded-full bg-primary px-3.5 py-1.5 text-primary-foreground shadow-sm hover:opacity-90">Arena</Link>
           
           <div className="ml-4 pl-4 border-l border-border/50 flex items-center gap-2">
             <SignedOut>
@@ -140,7 +139,7 @@ function Footer() {
       <div className="flex flex-col sm:flex-row justify-center items-center gap-6">
         <div className="flex items-center gap-2 text-muted-foreground text-sm">
            <img src="/txodds.png" alt="TXOdds" className="h-5 w-5 rounded-full" />
-           <span className="font-semibold">TXOdds</span>
+           <span className="font-semibold">Powered by TXOdds</span>
         </div>
         <div className="w-1 h-1 rounded-full bg-border hidden sm:block" />
         <a href="https://x.com/mishastastna" target="_blank" rel="noreferrer" className="inline-flex items-center gap-3 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">

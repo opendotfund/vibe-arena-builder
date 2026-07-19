@@ -44,18 +44,85 @@ export const streamToMotherDuck = createServerFn({ method: "POST" })
           (err) => {
             if (err) return reject(err);
 
-            // Use DuckDB Appender to stream rows directly into MotherDuck
-            const appender = con.appender(tableName);
+            // Use DuckDB Prepared Statement to insert rows
+            const stmt = con.prepare(`INSERT INTO ${tableName} VALUES (?, ?, ?, ?, ?, ?, ?)`);
             for (const t of data.trades) {
-              appender.appendRow([t.timestamp, t.market, t.side, t.odds, t.stakePct, t.pnl, t.result]);
+              stmt.run(t.timestamp, t.market, t.side, t.odds, t.stakePct, t.pnl, t.result);
             }
-            
-            appender.close((closeErr) => {
+            stmt.finalize((closeErr) => {
               if (closeErr) return reject(closeErr);
               resolve({ success: true, table: tableName });
             });
           }
         );
+      } catch (err) {
+        reject(err);
+      }
+    });
+  });
+
+export const fetchTicksFromMotherDuck = createServerFn({ method: "POST" })
+  .validator((data: unknown) =>
+    z.object({
+      slug: z.string(),
+      apiKey: z.string(),
+    }).parse(data)
+  )
+  .handler(async ({ data }) => {
+    // 1. Fetch available books for the slug
+    const url = `https://api.predictiondata.dev/v1/exports/polymarket/markets/${data.slug}/YES`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`Failed to fetch from PredictionData API: ${res.statusText}`);
+    
+    const apiData = await res.json();
+    const books = apiData.exports?.books || [];
+    if (books.length === 0) throw new Error("No book exports found for this market.");
+
+    // 2. Sort to get the most recent date
+    books.sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    const latest = books[0];
+
+    // 3. Construct CSV URL
+    const csvUrl = `https://datasets.predictiondata.dev/polymarket/books/${data.slug}/YES/${latest.filename}?slug=true&apikey=${data.apiKey}`;
+
+    // 4. Query directly via MotherDuck
+    const db = await getDb();
+    return new Promise((resolve, reject) => {
+      try {
+        const con = db.connect();
+        
+        // We use a subquery to filter nulls first, then use reservoir sampling for 500 ticks 
+        // spread evenly throughout the day, and finally order by timestamp.
+        const query = `
+          INSTALL httpfs; LOAD httpfs;
+          SELECT * FROM (
+            SELECT 
+              exchange_timestamp as timestamp,
+              cast(split_part(bid_prices::VARCHAR, ',', 1) as float) as home_odds
+            FROM read_csv_auto('${csvUrl}')
+            WHERE bid_prices IS NOT NULL
+          ) USING SAMPLE 500 ROWS
+          ORDER BY timestamp ASC
+        `;
+
+        con.all(query, (err: any, rows: any[]) => {
+          if (err) return reject(err);
+          
+          // Map to MarketTick format expected by Backtester
+          const ticks = rows.map((r: any) => {
+            const home = Number(r.home_odds) || 1.5;
+            const away = 1 / (1 - (1 / home)); // rough implied away odds without vig
+            return {
+              timestamp: Number(r.timestamp),
+              home_odds: home,
+              away_odds: away > 0 && away < 100 ? away : 2.0,
+              implied_home_prob: (1 / home) * 100,
+              market_move: (Math.random() - 0.5) * 10, // mock market move
+            };
+          });
+          
+          resolve(ticks);
+        });
       } catch (err) {
         reject(err);
       }

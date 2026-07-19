@@ -42,7 +42,11 @@ export class Backtester {
     if (rule.conditions.length === 0) return true;
 
     return rule.conditions.every((c) => {
-      const fieldVal = (tick as any)[c.field] || 0;
+      let fieldVal = (tick as any)[c.field] || 0;
+      if (c.field === "bankroll_pct") {
+        // Mocking 'bankroll used %' as a function of current bankroll vs starting 10000
+        fieldVal = Math.max(0, 100 - ((this.currentBankroll / 10000) * 100));
+      }
       switch (c.op) {
         case ">": return fieldVal > c.value;
         case ">=": return fieldVal >= c.value;
@@ -74,33 +78,6 @@ export class Backtester {
       pnl,
       result: won ? "win" : "loss",
     });
-  }
-
-  // Fetches historical data from predictiondata.dev
-  static async fetchTicks(apiKey: string, marketSlug: string): Promise<MarketTick[]> {
-    // Simulate fetching historical data from Polymarket via predictiondata.dev
-    // In production we would use fetch() with the x-auth-token: apiKey header
-    // and parse the CSV stream. We simulate 100 random ticks here.
-    
-    const startTime = Date.now() - 30 * 24 * 60 * 60 * 1000; // 30 days ago
-    const ticks: MarketTick[] = [];
-    
-    let currentHome = 1.5 + (Math.random() * 2);
-    let currentAway = 1.2 + (Math.random() * 2);
-    
-    for (let i = 0; i < 100; i++) {
-      currentHome = Math.max(1.01, currentHome + (Math.random() - 0.5) * 0.2);
-      currentAway = Math.max(1.01, currentAway + (Math.random() - 0.5) * 0.2);
-      
-      ticks.push({
-        timestamp: startTime + (i * 60 * 60 * 1000), // 1 hour intervals
-        home_odds: currentHome,
-        away_odds: currentAway,
-        implied_home_prob: (1 / currentHome) * 100,
-        market_move: (Math.random() - 0.5) * 5,
-      });
-    }
-    return ticks;
   }
 
   // Evaluates a strategy against a set of ticks

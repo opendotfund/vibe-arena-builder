@@ -11,9 +11,12 @@ import {
 } from "@/lib/strategies";
 import { Backtester, type TradeResult } from "@/lib/backtester";
 import { TerminalChart } from "@/components/TerminalChart";
+import { fetchTicksFromMotherDuck } from "@/lib/parquet-stream";
+import { useServerFn } from "@tanstack/react-start";
+import { toast } from "sonner";
 
 export type BattleStep = {
-  tick: { minute: string; home_odds: string; away_odds: string; draw_odds: string; market_move: string };
+  tick: { timestamp: number; minute: string; home_odds: string; away_odds: string; draw_odds: string; market_move: string };
   a: { bankroll: number; note: string };
   b: { bankroll: number; note: string };
 };
@@ -72,7 +75,7 @@ function VsPage() {
     if (b) setAgentB(list.find((s) => s.id === b) ?? OPPONENT);
   }, [a, b]);
 
-  const [slug, setSlug] = useState("super-bowl-champion-2026-731");
+  const [slug, setSlug] = useState("will-the-seattle-seahawks-win-super-bowl-2026");
   const [steps, setSteps] = useState<BattleStep[]>([]);
   const [idx, setIdx] = useState(0);
   const [playing, setPlaying] = useState(false);
@@ -81,6 +84,8 @@ function VsPage() {
   const [tradesB, setTradesB] = useState<TradeResult[]>([]);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const fetchTicksFn = useServerFn(fetchTicksFromMotherDuck);
+
   const runMatch = async () => {
     if (!agentA) return;
     setLoading(true);
@@ -88,7 +93,13 @@ function VsPage() {
     setPlaying(false);
     try {
       const apiKey = "vd_cJ6EjdkKC6s2ZMJ4kg8pWP8IyDsXoDoiS4wCAG0MG4fW";
-      const ticks = await Backtester.fetchTicks(apiKey, slug);
+      toast.info("Fetching opponent data via MotherDuck...");
+      const ticks = await fetchTicksFn({ data: { slug, apiKey } });
+      
+      if (!ticks || ticks.length === 0) {
+        throw new Error("No ticks returned for this market.");
+      }
+      
       const trA = Backtester.runSimulation(agentA, slug, ticks);
       const trB = Backtester.runSimulation(agentB, slug, ticks);
       
@@ -106,7 +117,7 @@ function VsPage() {
         if (tB) bankB += tB.pnl;
         
         combinedSteps.push({
-          tick: { minute: new Date(t.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), home_odds: t.home_odds.toFixed(2), away_odds: t.away_odds.toFixed(2), draw_odds: "0", market_move: t.market_move.toFixed(2) },
+          tick: { timestamp: t.timestamp, minute: new Date(t.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), home_odds: t.home_odds.toFixed(2), away_odds: t.away_odds.toFixed(2), draw_odds: "0", market_move: t.market_move.toFixed(2) },
           a: { bankroll: bankA, note: tA ? `${tA.result === 'win' ? '+' : '-'}$${Math.abs(tA.pnl).toFixed(0)} on ${tA.side}` : 'skip' },
           b: { bankroll: bankB, note: tB ? `${tB.result === 'win' ? '+' : '-'}$${Math.abs(tB.pnl).toFixed(0)} on ${tB.side}` : 'skip' },
         });
@@ -160,7 +171,7 @@ function VsPage() {
           <input 
             value={slug}
             onChange={(e) => setSlug(e.target.value)}
-            placeholder="Market (e.g. super-bowl-champion)"
+            placeholder="Market slug..."
             className="w-48 rounded-md border border-border bg-background px-3 py-2 text-sm mono"
           />
           <button onClick={runMatch} disabled={loading} className="rounded-md bg-primary text-primary-foreground px-3 py-2 text-sm font-semibold glow-sky disabled:opacity-50 inline-flex items-center gap-2">
@@ -207,8 +218,16 @@ function VsPage() {
 
       {/* Trading Terminals */}
       <div className="mt-6 grid gap-6 lg:grid-cols-2 h-[500px]">
-        <TerminalChart trades={tradesA} title={`AGENT: ${agentA.name.toUpperCase()}`} pnlOnly={true} />
-        <TerminalChart trades={tradesB} title={`AGENT: ${agentB.name.toUpperCase()}`} pnlOnly={true} />
+        <TerminalChart 
+          trades={step ? tradesA.filter(t => t.timestamp <= step.tick.timestamp) : []} 
+          title={`AGENT: ${agentA.name.toUpperCase()}`} 
+          pnlOnly={true} 
+        />
+        <TerminalChart 
+          trades={step ? tradesB.filter(t => t.timestamp <= step.tick.timestamp) : []} 
+          title={`AGENT: ${agentB.name.toUpperCase()}`} 
+          pnlOnly={true} 
+        />
       </div>
 
       <div className="mt-8 text-center">

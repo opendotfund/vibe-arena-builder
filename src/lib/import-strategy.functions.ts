@@ -74,7 +74,7 @@ export const importStrategy = createServerFn({ method: "POST" })
     const key = process.env.GEMINI_API_KEY;
     if (!key) throw new Error("Missing GEMINI_API_KEY");
 
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`;
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`;
 
     const body = {
       systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
@@ -101,9 +101,18 @@ export const importStrategy = createServerFn({ method: "POST" })
     const text = json.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
     let parsed: unknown;
     try {
-      parsed = JSON.parse(text);
+      let cleanText = text.trim();
+      if (cleanText.startsWith("```json")) {
+        cleanText = cleanText.slice(7);
+      } else if (cleanText.startsWith("```")) {
+        cleanText = cleanText.slice(3);
+      }
+      if (cleanText.endsWith("```")) {
+        cleanText = cleanText.slice(0, -3);
+      }
+      parsed = JSON.parse(cleanText.trim());
     } catch {
-      throw new Error("Model did not return valid JSON");
+      throw new Error(`Model did not return valid JSON. Raw output: ${text.slice(0, 50)}...`);
     }
     const strategy = StrategySchema.parse(parsed);
     return strategy;

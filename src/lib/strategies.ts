@@ -39,6 +39,12 @@ export type Strategy = {
   rules: Rule[];
   createdAt: number;
   updatedAt: number;
+  lastBacktest?: {
+    pnl: number;
+    tradesCount: number;
+    timestamp: number;
+    marketSlug: string;
+  };
 };
 
 export const FIELD_LABELS: Record<ConditionField, string> = {

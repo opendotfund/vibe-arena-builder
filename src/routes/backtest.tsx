@@ -7,7 +7,7 @@ import { useUser } from "@clerk/clerk-react";
 
 import { Backtester, type TradeResult } from "../lib/backtester";
 import { type Strategy, loadStrategiesAsync } from "../lib/strategies";
-import { streamToMotherDuck } from "../lib/parquet-stream";
+import { streamToMotherDuck, fetchTicksFromMotherDuck } from "../lib/parquet-stream";
 import { TerminalChart } from "../components/TerminalChart";
 
 export const Route = createFileRoute("/backtest")({
@@ -17,28 +17,37 @@ export const Route = createFileRoute("/backtest")({
       { name: "description", content: "Advanced historical trading terminal simulator." },
     ],
   }),
+  validateSearch: (search: Record<string, unknown>) => ({
+    agent: typeof search.agent === "string" ? search.agent : undefined,
+  }),
   component: BacktestHub,
 });
 
 function BacktestHub() {
   const { user } = useUser();
   const userId = user?.id;
+  const search = Route.useSearch();
 
   const [list, setList] = useState<Strategy[]>([]);
   const [selectedStrategyId, setSelectedStrategyId] = useState<string>("");
-  const [slug, setSlug] = useState("super-bowl-champion-2026-731");
+  const [slug, setSlug] = useState("will-the-seattle-seahawks-win-super-bowl-2026");
   const [running, setRunning] = useState(false);
   const [results, setResults] = useState<TradeResult[]>([]);
   const [dbTable, setDbTable] = useState<string | null>(null);
   
   const uploadFn = useServerFn(streamToMotherDuck);
+  const fetchTicksFn = useServerFn(fetchTicksFromMotherDuck);
 
   useEffect(() => {
     loadStrategiesAsync(userId).then(l => {
       setList(l);
-      if (l.length > 0) setSelectedStrategyId(l[0].id);
+      if (search.agent) {
+        setSelectedStrategyId(search.agent);
+      } else if (l.length > 0) {
+        setSelectedStrategyId(l[0].id);
+      }
     });
-  }, [userId]);
+  }, [userId, search.agent]);
 
   const strategy = list.find(s => s.id === selectedStrategyId);
 
@@ -51,10 +60,31 @@ function BacktestHub() {
       // In a real app we'd fetch this from the user's settings/env securely
       const apiKey = "vd_cJ6EjdkKC6s2ZMJ4kg8pWP8IyDsXoDoiS4wCAG0MG4fW";
       
-      const ticks = await Backtester.fetchTicks(apiKey, slug);
+      toast.info("Querying PredictionData via MotherDuck...");
+      const ticks = await fetchTicksFn({ data: { slug, apiKey } });
+      
+      if (!ticks || ticks.length === 0) {
+        throw new Error("No ticks returned for this market.");
+      }
+
       const trades = Backtester.runSimulation(strategy, slug, ticks);
       setResults(trades);
       toast.success(`Simulation finished: ${trades.length} trades executed.`);
+      
+      const totalPnl = trades.reduce((sum, t) => sum + t.pnl, 0);
+      const updatedStrategy = {
+        ...strategy,
+        lastBacktest: {
+          pnl: totalPnl,
+          tradesCount: trades.length,
+          timestamp: Date.now(),
+          marketSlug: slug,
+        }
+      };
+      
+      // Save updated strategy with backtest results to the DB
+      await import("../lib/strategies").then(m => m.upsertStrategyAsync(updatedStrategy, userId));
+      setList(prev => prev.map(s => s.id === strategy.id ? updatedStrategy : s));
       
       // Upload Parquet to MotherDuck
       const res = await uploadFn({ data: { strategyId: strategy.id, trades } });
@@ -103,12 +133,23 @@ function BacktestHub() {
 
               <div>
                 <label className="text-xs text-muted-foreground font-medium mb-1.5 block">Market Slug</label>
-                <input 
-                  value={slug} 
-                  onChange={e => setSlug(e.target.value)} 
-                  placeholder="super-bowl-champion-2026-731" 
-                  className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm mono outline-none"
-                />
+                <div className="flex gap-2">
+                  <select
+                    value={slug}
+                    onChange={e => setSlug(e.target.value)}
+                    className="w-[120px] rounded-md border border-border bg-background px-3 py-2 text-sm shrink-0"
+                  >
+                    <option value="will-the-seattle-seahawks-win-super-bowl-2026">NFL 2026</option>
+                    <option value="will-taylor-swift-endorse-kamala-harris">Taylor/Harris</option>
+                    <option value="will-bitcoin-hit-100k-in-2024">BTC 100k (2024)</option>
+                  </select>
+                  <input 
+                    value={slug} 
+                    onChange={e => setSlug(e.target.value)} 
+                    placeholder="or type custom slug..." 
+                    className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm mono outline-none"
+                  />
+                </div>
               </div>
 
               <button 

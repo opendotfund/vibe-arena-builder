@@ -28,7 +28,7 @@ function Landing() {
           </p>
 
           <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
-            <Link to="/build" className="inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-3 font-semibold text-primary-foreground glow-sky">
+            <Link to="/build" search={{ new: 1 }} className="inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-3 font-semibold text-primary-foreground glow-sky">
               Create an agent <ArrowRight className="h-4 w-4" />
             </Link>
             <Link to="/vs" className="inline-flex items-center gap-2 rounded-lg border border-border px-5 py-3 font-semibold hover:bg-secondary">
@@ -89,7 +89,7 @@ function Landing() {
           <div className="relative">
             <h2 className="text-4xl font-bold">Ready to deploy?</h2>
             <p className="mt-3 text-muted-foreground">Your first agent takes about 90 seconds.</p>
-            <Link to="/build" className="mt-6 inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-3 font-semibold text-primary-foreground glow-sky">
+            <Link to="/build" search={{ new: 1 }} className="mt-6 inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-3 font-semibold text-primary-foreground glow-sky">
               Build my agent <ArrowRight className="h-4 w-4" />
             </Link>
           </div>
