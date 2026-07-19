@@ -87,10 +87,15 @@ function BacktestHub() {
       setList(prev => prev.map(s => s.id === strategy.id ? updatedStrategy : s));
       
       // Upload Parquet to MotherDuck
-      const res = await uploadFn({ data: { strategyId: strategy.id, trades } });
-      if (res?.success) {
-        setDbTable(res.table);
-        toast.success("Streamed to MotherDuck seamlessly!");
+      try {
+        const res = await uploadFn({ data: { strategyId: strategy.id, trades } });
+        if (res?.success) {
+          setDbTable(res.table);
+          toast.success("Streamed to MotherDuck seamlessly!");
+        }
+      } catch (uploadErr: any) {
+        console.warn("MotherDuck upload failed:", uploadErr);
+        toast.info("Simulation succeeded, but MotherDuck streaming is currently unavailable.");
       }
     } catch (err: any) {
       toast.error(err.message || "Failed to run simulation");

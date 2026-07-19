@@ -37,34 +37,80 @@ export const Route = createFileRoute("/vs")({
   component: VsPage,
 });
 
-// A canned opponent so the arena works out of the box.
-const OPPONENT: Strategy = {
-  id: "opp-fade",
-  name: "FADE.THE.FAV",
-  description: "Backs the underdog when the market moves against them.",
-  rules: [
-    {
-      id: "r1", name: "Fade the favourite",
-      conditions: [
-        { id: "c1", field: "away_odds", op: ">=", value: 2.6 },
-        { id: "c2", field: "market_move", op: ">", value: 2 },
-      ],
-      action: { side: "away", stakePct: 4 },
-    },
-    {
-      id: "r2", name: "Bankroll guard",
-      conditions: [{ id: "c1", field: "bankroll_pct", op: ">", value: 40 }],
-      action: { side: "skip", stakePct: 0 },
-    },
-  ],
-  createdAt: 0, updatedAt: 0,
-};
+// Canned opponents so the arena works out of the box with diverse bots.
+const BOT_OPPONENTS: Strategy[] = [
+  {
+    id: "bot-fade",
+    name: "FADE.THE.FAV",
+    description: "Backs the underdog when the market moves against them.",
+    rules: [
+      {
+        id: "r1", name: "Bankroll guard",
+        conditions: [{ id: "c1", field: "bankroll_pct", op: ">", value: 40 }],
+        action: { side: "skip", stakePct: 0 },
+      },
+      {
+        id: "r2", name: "Fade the favourite",
+        conditions: [
+          { id: "c2", field: "away_odds", op: ">=", value: 2.2 },
+        ],
+        action: { side: "away", stakePct: 4 },
+      }
+    ],
+    createdAt: 0, updatedAt: 0,
+  },
+  {
+    id: "bot-home",
+    name: "HOME.SWEET.HOME",
+    description: "Always bets the home side if they are heavily favored.",
+    rules: [
+      {
+        id: "r1", name: "Back the favorite",
+        conditions: [
+          { id: "c1", field: "home_odds", op: "<=", value: 1.8 }
+        ],
+        action: { side: "home", stakePct: 5 },
+      }
+    ],
+    createdAt: 0, updatedAt: 0,
+  },
+  {
+    id: "bot-degen",
+    name: "DEGEN.APE",
+    description: "Full send on high volatility longshots.",
+    rules: [
+      {
+        id: "r1", name: "Ape in",
+        conditions: [
+          { id: "c1", field: "implied_home_prob", op: "<=", value: 30 }
+        ],
+        action: { side: "home", stakePct: 15 },
+      }
+    ],
+    createdAt: 0, updatedAt: 0,
+  },
+  {
+    id: "bot-sniper",
+    name: "VOLATILITY.SURFER",
+    description: "Rides massive market moves.",
+    rules: [
+      {
+        id: "r1", name: "Snipe the move",
+        conditions: [
+          { id: "c1", field: "market_move", op: ">=", value: 2 }
+        ],
+        action: { side: "home", stakePct: 8 },
+      }
+    ],
+    createdAt: 0, updatedAt: 0,
+  }
+];
 
 function VsPage() {
   const { a, b } = Route.useSearch();
   const [saved, setSaved] = useState<Strategy[]>([]);
   const [agentA, setAgentA] = useState<Strategy | null>(null);
-  const [agentB, setAgentB] = useState<Strategy>(OPPONENT);
+  const [agentB, setAgentB] = useState<Strategy>(BOT_OPPONENTS[0]);
   const [seed, setSeed] = useState(7);
 
   useEffect(() => {
@@ -72,7 +118,7 @@ function VsPage() {
     setSaved(list);
     const fallbackA = list[0] ?? emptyStrategy();
     setAgentA(list.find((s) => s.id === a) ?? fallbackA);
-    if (b) setAgentB(list.find((s) => s.id === b) ?? OPPONENT);
+    if (b) setAgentB(list.find((s) => s.id === b) ?? BOT_OPPONENTS.find(o => o.id === b) ?? BOT_OPPONENTS[0]);
   }, [a, b]);
 
   const [slug, setSlug] = useState("will-the-seattle-seahawks-win-super-bowl-2026");
@@ -123,6 +169,7 @@ function VsPage() {
         });
       });
       setSteps(combinedSteps);
+      setPlaying(true);
     } catch (e: any) {
       console.error(e);
     } finally {
@@ -160,13 +207,19 @@ function VsPage() {
           <select
             value={agentB.id}
             onChange={(e) => {
-              const found = saved.find((s) => s.id === e.target.value);
-              setAgentB(found ?? OPPONENT);
+              const found = saved.find((s) => s.id === e.target.value) || BOT_OPPONENTS.find(s => s.id === e.target.value);
+              setAgentB(found ?? BOT_OPPONENTS[0]);
             }}
-            className="rounded-md border border-border bg-background px-3 py-2 text-sm"
+            className="rounded-md border border-border bg-background px-3 py-2 text-sm max-w-[200px]"
           >
-            <option value={OPPONENT.id}>Opponent: {OPPONENT.name}</option>
-            {saved.filter((s) => s.id !== agentA.id).map((s) => <option key={s.id} value={s.id}>Opponent: {s.name}</option>)}
+            <optgroup label="Bot Opponents">
+              {BOT_OPPONENTS.map((s) => <option key={s.id} value={s.id}>Bot: {s.name}</option>)}
+            </optgroup>
+            {saved.filter(s => s.id !== agentA.id).length > 0 && (
+              <optgroup label="Your Agents">
+                {saved.filter((s) => s.id !== agentA.id).map((s) => <option key={s.id} value={s.id}>You: {s.name}</option>)}
+              </optgroup>
+            )}
           </select>
           <input 
             value={slug}
@@ -202,11 +255,19 @@ function VsPage() {
             </div>
 
             <div className="mt-4 flex items-center gap-2">
-              <button onClick={() => setPlaying((p) => !p)} className="inline-flex items-center gap-1 rounded-md bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground glow-sky">
+              <button 
+                onClick={() => setPlaying((p) => !p)} 
+                disabled={steps.length === 0}
+                className="inline-flex items-center gap-1 rounded-md bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground glow-sky disabled:opacity-50"
+              >
                 {playing ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
                 {playing ? "Pause" : "Play"}
               </button>
-              <button onClick={() => setIdx((i) => Math.min(steps.length - 1, i + 1))} className="rounded-md border border-border px-3 py-2 text-sm hover:bg-secondary">
+              <button 
+                onClick={() => setIdx((i) => Math.min(steps.length - 1, i + 1))} 
+                disabled={steps.length === 0}
+                className="rounded-md border border-border px-3 py-2 text-sm hover:bg-secondary disabled:opacity-50"
+              >
                 <ChevronsRight className="h-4 w-4" />
               </button>
             </div>
